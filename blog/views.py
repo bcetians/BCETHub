@@ -505,12 +505,14 @@ def submit_feedback(request):
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
         category = request.POST.get('category', 'BUG')
+        contact = request.POST.get('contact', '').strip()
         message_text = request.POST.get('message', '').strip()
 
         if name and message_text:
             Feedback.objects.create(
                 name=name,
                 category=category,
+                contact=contact,
                 message=message_text
             )
             messages.success(request, 'Thank you! Your feedback has been sent to the developer.')
@@ -691,7 +693,7 @@ def assignments(request):
     return render(request, 'blog/assignments.html', context)
 
 def community(request):
-    community = Community.objects.all()
+    community = Community.objects.all().order_by("group_type", "id")
     context = {
         "community": community,
        "coming_soon": "Community features are rolling out step by step. Stay tuned as new tools arrive!"
