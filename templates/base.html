@@ -234,54 +234,55 @@
         {% block content %}
         {% endblock %}
     </main>
+    {% if request.resolver_match.url_name == 'home' %}
+        <div class="feedback-floating-wrapper" id="feedback-floating-wrapper">
+            <button type="button" class="feedback-fab-circle" id="feedback-toggle-btn" title="Feedback">
+                <i data-lucide="message-square-plus" class="fab-icon"></i>
+            </button>
 
-    <div class="feedback-floating-wrapper" id="feedback-floating-wrapper">
-        <button type="button" class="feedback-fab-circle" id="feedback-toggle-btn" title="Feedback">
-            <i data-lucide="message-square-plus" class="fab-icon"></i>
-        </button>
-
-        <div class="feedback-popover" id="feedback-popover">
-            <div class="chatbot-header">
-                <div class="header-info">
-                    <div class="bot-avatar"><i data-lucide="bot"></i></div>
-                    <div>
-                        <h4>Help & Feedback</h4>
+            <div class="feedback-popover" id="feedback-popover">
+                <div class="chatbot-header">
+                    <div class="header-info">
+                        <div class="bot-avatar"><i data-lucide="bot"></i></div>
+                        <div>
+                            <h4>Help & Feedback</h4>
+                        </div>
                     </div>
+                    <button type="button" class="close-btn" id="feedback-close-btn">&times;</button>
                 </div>
-                <button type="button" class="close-btn" id="feedback-close-btn">&times;</button>
-            </div>
 
-            <form action="{% url 'submit_feedback' %}" method="POST" class="feedback-form">
-                {% csrf_token %}
-                <div class="form-group">
-                    <label for="fb-name">Your Name</label>
-                    <input type="text" id="fb-name" name="name" placeholder="Enter your full name" required
-                        class="custom-input">
-                </div>
-                <div class="form-group">
-                    <label for="fb-category">Category</label>
-                    <select id="fb-category" name="category" class="custom-select">
-                        <option value="BUG">🐛 Bug Report</option>
-                        <option value="IDEA">💡 Suggestion / Idea</option>
-                        <option value="OTHER">💬 General Feedback</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="fb-contact">Your Contact</label>
-                    <input type="text" id="fb-contact" name="contact" placeholder="Enter your Contact P.No/Email..."
-                        required class="custom-input">
-                </div>
-                <div class="form-group">
-                    <label for="fb-message">Message</label>
-                    <textarea id="fb-message" name="message" rows="3" placeholder="Describe feedback..." required
-                        class="custom-textarea"></textarea>
-                </div>
-                <button type="submit" class="btn-submit-feedback">
-                    <i data-lucide="send"></i> Send Message
-                </button>
-            </form>
+                <form action="{% url 'submit_feedback' %}" method="POST" class="feedback-form">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="fb-name">Your Name</label>
+                        <input type="text" id="fb-name" name="name" placeholder="Enter your full name" required
+                            class="custom-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="fb-category">Category</label>
+                        <select id="fb-category" name="category" class="custom-select">
+                            <option value="BUG">🐛 Bug Report</option>
+                            <option value="IDEA">💡 Suggestion / Idea</option>
+                            <option value="OTHER">💬 General Feedback</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fb-contact">Your Contact</label>
+                        <input type="text" id="fb-contact" name="contact" placeholder="Enter your Contact P.No/Email..."
+                            required class="custom-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="fb-message">Message</label>
+                        <textarea id="fb-message" name="message" rows="3" placeholder="Describe feedback..." required
+                            class="custom-textarea"></textarea>
+                    </div>
+                    <button type="submit" class="btn-submit-feedback">
+                        <i data-lucide="send"></i> Send Message
+                    </button>
+                </form>
+            </div>
         </div>
-    </div>
+    {% endif %}
 
     {% include 'includes/footer.html' %}
 
