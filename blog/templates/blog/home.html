@@ -5,10 +5,54 @@
 
 {% block content %}
 
+<!-- Greeting bar -->
+    <div class="bcet-greeting-banner" style="margin-bottom: 14px; padding: 10px 16px;">
+        <div
+            class="bcet-greeting-status"
+            hx-get="{% url 'greetings' %}"
+            hx-trigger="load"
+            hx-target="#output-div"
+            hx-swap="innerHTML"
+            >
+            <strong id="output-div">Good Morning, <span>{% if request.user.username %}@{{ request.user.username }}{% else %}BCETians{% endif %}</span></strong>
+        </div>
+    </div>
+
 {% include 'blog/includes/notice.html' %}
 
-<div class="home-wrapper">
+<style>
+    .bcet-greeting-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        margin-bottom: 22px;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
 
+    .bcet-greeting-status {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .bcet-greeting-status strong {
+        display: block;
+        font-size: 13.5px;
+        color: var(--text-primary);
+    }
+
+    .bcet-greeting-status span {
+        font-size: 14.5px;
+        color: var(--text-muted);
+    }
+</style>
+
+<div class="home-wrapper">
     <!-- Today Highlights Container -->
     <div class="home-dynamic-cards" style="display: flex; flex-direction: column; gap: 1.5rem;">
 

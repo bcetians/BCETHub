@@ -73,16 +73,28 @@ i[data-lucide] {
 
 /* NAVBAR */
 .navbar {
-  background-color: var(--nav-bg);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  border-bottom: 1px solid var(--border-color);
-  position: sticky;
-  top: 0;
-  width: 100%;
-  z-index: 1000;
-  transition:
-    background-color 0.25s ease,
-    border-color 0.25s ease;
+    background-color: rgba(#1b1b1b, 0.15);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+    isolation: isolate;
+    transition: 
+        background-color 0.25s ease,
+        border-bottom 0.25s ease;
+}
+
+.navbar::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-color: rgba(#1b1b1b, 0.15);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: -1;
+    border-radius: inherit;
 }
 
 .nav-container {
@@ -146,6 +158,21 @@ i[data-lucide] {
   padding: 6px 10px;
   border-radius: 8px;
   transition: color 0.2s ease;
+}
+
+.nav-links .nav-item .nav-profile-pic {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid var(--text-primary);
+    display: block;
+    background-color: var(--text-primary);
+}
+
+.nav-links .nav-item .active {
+    border: 2px solid var(--accent-blue);
 }
 
 .nav-item i {
@@ -275,6 +302,40 @@ i[data-lucide] {
   color: var(--text-muted);
 }
 
+.bcet-live-search-profile {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px;
+}
+
+.live-search-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #ffffff;
+  background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%);
+}
+
+.live-search-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.live-search-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
 .live-search-footer {
   padding-top: 8px;
   border-top: 1px solid var(--border-color);
@@ -293,6 +354,221 @@ i[data-lucide] {
   text-align: center;
   font-size: 13px;
   color: var(--text-muted);
+}
+
+/* BCET Unified Card & Avatar */
+.bcet-club-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.bcet-club-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+  border-color: #0284c7;
+}
+
+.bcet-mini-banner {
+  width: 100%;
+  height: 75px;
+  background: linear-gradient(135deg, #091322 0%, #172554 60%, #0369a1 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.bcet-mini-banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.bcet-mini-banner-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.2;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+.bcet-card-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 16px;
+  margin-top: -30px;
+  position: relative;
+  z-index: 2;
+}
+
+.bcet-club-avatar {
+  width: 58px !important;
+  height: 58px !important;
+  min-width: 58px !important;
+  max-width: 58px !important;
+  max-height: 58px !important;
+  border-radius: 50% !important;
+  background: var(--card-bg);
+  border: 3px solid var(--card-bg);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.bcet-club-avatar img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+  border-radius: 50% !important;
+}
+
+.bcet-club-avatar span {
+  background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bcet-btn-join {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  background: #0284c7;
+  color: #ffffff;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.bcet-btn-join:hover {
+  background: #0369a1;
+  color: #ffffff;
+}
+
+.bcet-card-info-wrap {
+  padding: 10px 16px 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.bcet-club-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.bcet-club-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.bcet-club-link:hover {
+  color: #0284c7;
+}
+
+.bcet-club-username {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+}
+
+.bcet-card-body {
+  padding: 10px 16px;
+  flex: 1;
+}
+
+.bcet-club-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.bcet-card-foot {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.bcet-social-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bcet-social-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  background: var(--input-bg);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.bcet-social-btn:hover {
+  color: #0284c7;
+  border-color: #0284c7;
+  background: rgba(2, 132, 199, 0.08);
+}
+
+.bcet-pill-batch,
+.bcet-tag-category {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(2, 132, 199, 0.1);
+  color: #0284c7;
+  border: 1px solid rgba(2, 132, 199, 0.25);
+}
+
+.bcet-pill-dept-card {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
 }
 
 /* CUSTOM DROPDOWN SELECT STYLING */
@@ -1382,31 +1658,6 @@ select:focus {
   margin-bottom: 10px;
 }
 
-/* empty state */
-.empty-state {
-  text-align: center;
-  padding: 30px 20px;
-  color: var(--text-muted);
-}
-.empty-state i {
-  width: 36px;
-  height: 36px;
-  color: var(--text-muted);
-  margin-bottom: 10px;
-  display: inline-block;
-}
-.empty-state h4 {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 6px;
-}
-.empty-state p {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-bottom: 4px;
-}
-
 /* FOOTER */
 footer {
   background-color: var(--footer-bg);
@@ -1489,13 +1740,15 @@ footer {
     bottom: 0;
     left: 0;
     width: 100%;
-    background-color: var(--nav-bg);
-    border-top: 1px solid var(--border-color);
     padding: 10px 0;
     justify-content: space-around;
     gap: 0;
-    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.2);
     z-index: 1000;
+    background-color: rgba(#1b1b1b, 0.15);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   }
 
   .nav-item {
@@ -2344,4 +2597,51 @@ footer {
   border-top: 1px solid var(--border-color);
   margin-top: auto;
   gap: 8px;
+}
+
+/* Avatar badge */
+.bcet-avatar-wrapper {
+  position: relative;
+  border-radius: 50%;
+  border: 4px solid var(--border-color);
+  background-color: var(--card-bg);
+}
+
+.bcet-avatar-edit-badge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  border-radius: 50%;
+  background-color: var(--text-primary);
+  color: var(--card-bg);
+  border: 3px solid var(--card-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  z-index: 2;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.bcet-avatar-edit-badge:hover {
+  transform: scale(1.1);
+  opacity: 0.92;
+  color: var(--card-bg);
+}
+
+.bcet-avatar-edit-badge svg {
+  stroke: var(--card-bg);
+}
+
+@media (max-width: 600px) {
+  .bcet-avatar-wrapper {
+    border-width: 3px;
+  }
+
+  .bcet-avatar-edit-badge {
+    bottom: -2px;
+    right: -2px;
+    border-width: 2px;
+  }
 }

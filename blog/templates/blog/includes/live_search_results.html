@@ -1,11 +1,72 @@
 {% if query %}
     <div class="live-search-dropdown">
-        {% if post_results or faculty_results or routine_results or mess_results or induction_results or branch_results or notes_results or pyqs_results or assignments_results or community_results %}
-            <!-- Post results list -->
+        {% if post_results or faculty_results or routine_results or mess_results or induction_results or branch_results or notes_results or pyqs_results or assignments_results or community_results or portfolio_results %}
+            <!-- Student portfolios -->
+            {% if portfolio_results %}
+                <div class="live-search-cat">
+                    <span class="cat-label">Student Portfolios</span>
+                    {% for port in portfolio_results|slice:":4" %}
+                        <a href="{% url 'student_portfolio_profile' username=port.user.username %}" class="live-search-item bcet-live-search-profile">
+                            <div class="live-search-avatar">
+                                {% if port.profile_pic %}
+                                    <img src="{{ port.profile_pic.url }}" alt="{{ port.display_name }}">
+                                {% else %}
+                                    <span>{{ port.user.username|slice:":2"|upper }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="live-search-info">
+                                <span class="item-title">
+                                    {{ port.display_name }}
+                                    {% if port.is_bluetick %}
+                                        <i data-lucide="badge-check" style="color: #0095FF; width: 14px; height: 14px; margin-left: 2px; vertical-align: middle;"></i>
+                                    {% endif %}
+                                </span>
+                                <span class="item-sub">
+                                    @{{ port.user.username }}
+                                    {% if port.calculated_academic_year %}
+                                        • {{ port.calculated_academic_year }}
+                                    {% elif port.department %}
+                                        • {{ port.department|truncatechars:20 }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Community clubs -->
+            {% if community_results %}
+                <div class="live-search-cat">
+                    <span class="cat-label">Clubs &amp; Communities</span>
+                    {% for com in community_results|slice:":4" %}
+                        <a href="{% url 'community_page' username=com.username %}" class="live-search-item bcet-live-search-profile">
+                            <div class="live-search-avatar">
+                                {% if com.group_logo %}
+                                    <img src="{{ com.group_logo.url }}" alt="{{ com.group_name }}">
+                                {% else %}
+                                    <span>{{ com.group_name|slice:":2"|upper }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="live-search-info">
+                                <span class="item-title">
+                                    {{ com.group_name }}
+                                    {% if com.is_bluetick %}
+                                        <i data-lucide="badge-check" style="color: #0095FF; width: 14px; height: 14px; margin-left: 2px; vertical-align: middle;"></i>
+                                    {% endif %}
+                                </span>
+                                <span class="item-sub">@{{ com.username }} • {{ com.get_group_type_display }} Club</span>
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Posts and updates -->
             {% if post_results %}
                 <div class="live-search-cat">
                     <span class="cat-label">Posts &amp; Updates</span>
-                    {% for post in post_results|slice:":4" %}
+                    {% for post in post_results|slice:":3" %}
                         <a href="{% url 'community_post_detail' username=post.community.username slug=post.slug %}" class="live-search-item">
                             <span class="item-title">{{ post.title }}</span>
                             <span class="item-sub">{{ post.community.group_name }} • {{ post.get_post_type_display }}</span>
@@ -14,27 +75,14 @@
                 </div>
             {% endif %}
 
-            <!-- Faculty results list -->
+            <!-- Faculty and staff -->
             {% if faculty_results %}
                 <div class="live-search-cat">
                     <span class="cat-label">Faculty &amp; Staff</span>
-                    {% for fac in faculty_results|slice:":4" %}
+                    {% for fac in faculty_results|slice:":3" %}
                         <a href="{% url 'search' %}?q={{ fac.name|urlencode }}" class="live-search-item">
                             <span class="item-title">{{ fac.name }}</span>
                             <span class="item-sub">{% if fac.short_code %}[{{ fac.short_code }}] - {% endif %}{{ fac.branch.code }}</span>
-                        </a>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-            <!-- Community clubs list -->
-            {% if community_results %}
-                <div class="live-search-cat">
-                    <span class="cat-label">Clubs &amp; Communities</span>
-                    {% for com in community_results|slice:":4" %}
-                        <a href="{% url 'community_page' username=com.username %}" class="live-search-item">
-                            <span class="item-title">{{ com.group_name }}</span>
-                            <span class="item-sub">{{ com.get_group_type_display }}</span>
                         </a>
                     {% endfor %}
                 </div>

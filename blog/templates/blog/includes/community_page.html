@@ -1,8 +1,26 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ community.group_name }} - BCETHub{% endblock %}
+{% block title %}{{ community.group_name }} | BCETHub{% endblock %}
 
+<!-- Post meta tags -->
+{% block meta %}
+<meta name="description" content="{{ community.group_dec|striptags|truncatewords:25 }}">
+<meta property="og:site_name" content="BCETHub">
+<meta property="og:title" content="{{ community.group_name }} - BCETHub">
+<meta property="og:description" content="{{ community.group_dec|striptags|truncatewords:25 }}">
+<meta property="og:type" content="article">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+{% if community.group_logo %}
+<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ community.group_logo.url }}">
+{% endif %}
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ community.group_name }} - BCETHub">
+<meta name="twitter:description" content="{{ community.group_dec|striptags|truncatewords:25 }}">
+{% if community.group_logo %}
+<meta property="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ community.group_logo.url }}">
+{% endif %}
+{% endblock %}
 
 {% block content %}
 <style>
@@ -120,47 +138,16 @@
     /* Profile wrapper */
     .bcet-profile-wrapper {
         width: 100%;
-        max-width: 1100px;
-        margin: 0 auto;
-        /* padding: 0 16px 40px 16px; */
+        max-width: 860px;
+        margin: 0px auto 50px;
         box-sizing: border-box;
-    }
-
-    /* Admin top banner */
-    .bcet-owner-banner {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 14px 20px;
-        background-color: var(--card-bg);
-        border: 1px solid var(--border-color);
-        border-radius: 14px;
-        margin-bottom: 22px;
-        gap: 16px;
-        flex-wrap: wrap;
-    }
-
-    .bcet-owner-status {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .bcet-owner-status strong {
-        display: block;
-        font-size: 13.5px;
-        color: var(--text-primary);
-    }
-
-    .bcet-owner-status span {
-        font-size: 14.5px;
-        color: var(--text-muted);
     }
 
     .bcet-owner-actions {
         display: flex;
         align-items: center;
         gap: 10px;
+        flex-wrap: wrap;
     }
 
     .bcet-action-btn {
@@ -199,131 +186,313 @@
         color: #ffffff !important;
     }
 
+    /* Cover banner */
+    .bcet-portfolio-banner {
+        position: relative;
+        width: 100%;
+        height: 190px;
+        border-radius: 18px 18px 0 0;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        border-bottom: none;
+        background-color: #0f172a;
+    }
+
+    .bcet-portfolio-banner::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.4) 100%);
+        pointer-events: none;
+    }
+
+    .bcet-banner-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .bcet-banner-img-profile {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        filter: blur(3px);
+        transform: scale(1.05);
+    }
+
+    .bcet-banner-fallback {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #091322 0%, #172554 50%, #0369a1 100%);
+        position: relative;
+    }
+
+    .bcet-banner-pattern {
+        position: absolute;
+        inset: 0;
+        opacity: 0.15;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px);
+        background-size: 18px 18px;
+    }
+
+    .bcet-banner-edit-btn {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 12px;
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #ffffff;
+        text-decoration: none;
+        transition: all 0.15s ease;
+    }
+
+    .bcet-banner-edit-btn:hover {
+        background: rgba(15, 23, 42, 0.95);
+        border-color: #0284c7;
+    }
+
+    .bcet-banner-edit-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+
     /* Club header card */
     .bcet-profile-card {
         background-color: var(--card-bg);
         border: 1px solid var(--border-color);
-        border-radius: 16px;
-        padding: 28px;
+        border-radius: 0 0 18px 18px;
+        padding: 0 28px 28px;
         margin-bottom: 28px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     }
 
-    .bcet-profile-head {
+    .bcet-profile-top-row {
         display: flex;
-        align-items: flex-start;
-        gap: 24px;
-        margin-bottom: 20px;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
     }
 
-    .bcet-profile-avatar {
-        width: 96px;
-        height: 96px;
-        min-width: 96px;
-        border-radius: 50%;
+    .bcet-avatar-wrapper {
         position: relative;
-        display: inline-flex;
+        width: 110px;
+        height: 110px;
+        min-width: 110px;
+        border-radius: 50%;
+        margin-top: -55px;
+        border: 4px solid var(--card-bg);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+        background-color: var(--text-primary);
+        flex-shrink: 0;
+    }
+
+    .bcet-avatar-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+    .bcet-avatar-edit-badge {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: var(--text-primary);
+        color: var(--card-bg);
+        display: flex;
         align-items: center;
         justify-content: center;
-        overflow: visible !important;
-        flex-shrink: 0;
-        }
-
-        .bcet-profile-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 50%;
-            border: 2px solid var(--border-color);
-        }
-
-        .p-edit {
-            position: absolute;
-            right: -3px;
-            bottom: -4px;
-            width: 34px;
-            height: 34px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #ffffff;
-            color: var(--card-bg);
-            border: 3px solid var(--card-bg);
-            border-radius: 50%;
-            /* box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25); */
-            text-decoration: none;
-            z-index: 9999;
-        }
-
-        .p-edit i,
-        .p-edit svg {
-            width: 17px;
-            height: 17px;
-        }
-
-        .p-edit:hover {
-            background: #eaeaea;
-        }
-
-    .bcet-profile-details {
-        flex: 1 1 auto;
-        min-width: 0;
+        border: 3px solid var(--card-bg);
+        text-decoration: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+        z-index: 2;
+        transition: transform 0.15s ease, opacity 0.15s ease;
     }
 
-    .bcet-title-row {
+    .bcet-avatar-edit-badge:hover {
+        transform: scale(1.1);
+        opacity: 0.92;
+        color: var(--card-bg);
+    }
+
+    .bcet-avatar-edit-badge svg {
+        width: 14px;
+        height: 14px;
+        stroke: var(--card-bg);
+    }
+
+    .bcet-avatar-placeholder {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%);
+        color: #ffffff;
+        font-size: 30px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .bcet-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-top: 14px;
+        flex-wrap: wrap;
+    }
+
+    .bcet-btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background-color: #0284c7;
+        color: #ffffff;
+        border: 1px solid #0284c7;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .bcet-btn-primary:hover {
+        background-color: #0369a1;
+        border-color: #0369a1;
+        color: #ffffff;
+    }
+
+    .bcet-btn-primary svg {
+        width: 15px;
+        height: 15px;
+    }
+
+    .bcet-btn-outline {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .bcet-btn-outline:hover {
+        border-color: #0284c7;
+        color: var(--text-primary);
+    }
+
+    .bcet-btn-outline svg {
+        width: 15px;
+        height: 15px;
+    }
+
+    .bcet-btn-outline-danger {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        background-color: var(--card-bg);
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #ef4444;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .bcet-btn-outline-danger:hover {
+        background-color: #ef4444;
+        color: #ffffff;
+    }
+
+    .bcet-btn-outline-danger svg {
+        width: 15px;
+        height: 15px;
+    }
+
+    /* Identity section */
+    .bcet-identity-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .bcet-name-row {
         display: flex;
         align-items: center;
         gap: 12px;
         flex-wrap: wrap;
-        margin-bottom: 6px;
     }
 
-    .bcet-profile-name {
+    .bcet-student-name {
         font-size: 24px;
         font-weight: 800;
         color: var(--text-primary);
         margin: 0;
     }
 
-    .bcet-category-pill {
-        display: inline-flex;
+    .bcet-meta-row {
+        display: flex;
         align-items: center;
-        padding: 4px 10px;
-        border: 1px solid var(--border-color);
-        font-size: 11px;
-        font-weight: 700;
-        border-radius: 5px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        gap: 10px;
+        flex-wrap: wrap;
     }
 
-    .bcet-handle-row {
-        margin-bottom: 12px;
-    }
-
-    .bcet-username-handle {
-        font-size: 13px;
+    .bcet-handle {
+        font-size: 14px;
         font-weight: 600;
         color: var(--text-muted);
         display: inline-flex;
-        align-items: center;
+        align-items: end;
         gap: 4px;
     }
 
-    .bcet-username-handle svg {
-        width: 16px;
-        height: 16px;
-        min-width: 16px;
-        min-height: 16px;
-        flex-shrink: 0;
-        color: #0095FF;
+    .bcet-badge-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 9px;
+        border-radius: 6px;
+        font-size: 13.5px;
+        font-weight: 600;
     }
 
-    .bcet-profile-desc {
+    .bcet-pill-dept {
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+    }
+
+    .bcet-headline {
         font-size: 14px;
-        line-height: 1.65;
+        line-height: 1.6;
         color: var(--text-muted);
-        margin: 0;
+        margin: 4px 0 0 0;
     }
 
     /* Social links row */
@@ -332,7 +501,7 @@
         align-items: center;
         gap: 10px;
         flex-wrap: wrap;
-        padding-top: 20px;
+        padding-top: 18px;
         border-top: 1px solid var(--border-color);
     }
 
@@ -677,42 +846,59 @@
     }
 
     /* Mobile media adjustments */
-    @media (max-width: 768px) {
-        .bcet-profile-head {
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            gap: 16px;
+    @media (max-width: 600px) {
+        .bcet-portfolio-banner {
+            height: 140px;
+            border-radius: 14px 14px 0 0;
         }
 
-        .bcet-title-row {
-            flex-direction: column;
-            justify-content: center;
+        .bcet-avatar-wrapper {
+            width: 84px;
+            height: 84px;
+            min-width: 84px;
+            margin-top: -42px;
+            border: 3px solid var(--card-bg);
         }
 
-        .bcet-profile-socials {
-            justify-content: center;
+        .bcet-avatar-edit-badge {
+            width: 26px;
+            height: 26px;
+            bottom: -2px;
+            right: -2px;
+            border: 2px solid var(--card-bg);
         }
 
-        .bcet-chip-login {
-            margin-left: 0;
+        .bcet-avatar-edit-badge svg {
+            width: 12px;
+            height: 12px;
+            stroke: var(--card-bg);
         }
 
-        .bcet-owner-status {
-            justify-content: center;
+        .bcet-avatar-placeholder {
+            font-size: 26px;
         }
 
-        .bcet-owner-actions {
+        .bcet-profile-card {
+            padding: 0 16px 20px !important;
+            border-radius: 0 0 14px 14px;
+        }
+
+        .bcet-student-name {
+            font-size: 20px;
+        }
+
+        .bcet-header-actions {
+            width: 100%;
+        }
+
+        .bcet-header-actions a,
+        .bcet-header-actions button {
+            flex: 1;
             justify-content: center;
         }
 
         .bcet-posts-grid {
             grid-template-columns: 1fr;
-        }
-
-        .bcet-owner-banner {
-            flex-direction: row;
-            align-items: center;
         }
     }
 
@@ -744,50 +930,42 @@
 
 
 <div class="bcet-profile-wrapper">
-    <!-- Club admin bar -->
-    {% if is_owner %}
-    <div class="bcet-owner-banner">
-        <div
-            class="bcet-owner-status"
-            hx-get="{% url 'greetings' %}"
-            hx-trigger="load"
-            hx-target="#output-div"
-            hx-swap="innerHTML"
-        >
-            <div>
-                <strong id="output-div">
-                </strong>
+    <!-- Cover banner -->
+    <div class="bcet-portfolio-banner">
+        {% if community.banner %}
+            <img src="{{ community.banner.url }}" alt="{{ community.group_name }} Banner" class="bcet-banner-img">
+        {% elif community.group_logo %}
+            <img src="{{ community.group_logo.url }}" alt="{{ community.group_name }} Banner" class="bcet-banner-img-profile">
+        {% else %}
+            <div class="bcet-banner-fallback">
+                <div class="bcet-banner-pattern"></div>
             </div>
-        </div>
-        <div class="bcet-owner-actions">
-            <a href="{% url 'community_post_create' username=community.username %}" class="bcet-action-btn google-glow-border">
-                <i data-lucide="plus-circle"></i>
-                <span>Create Post</span>
+        {% endif %}
+
+        {% if is_owner %}
+            <a href="{% url 'community_edit' username=community.username %}" class="bcet-banner-edit-btn" title="Edit Club Banner">
+                <i data-lucide="camera"></i>
+                <span>Edit Banner</span>
             </a>
-            <a href="{% url 'community_logout' %}" class="bcet-action-btn bcet-btn-danger">
-                <i data-lucide="log-out"></i>
-                <span>Logout</span>
-            </a>
-        </div>
+        {% endif %}
     </div>
-    {% endif %}
 
     <!-- Club profile card -->
     <div class="bcet-profile-card">
-        <div class="bcet-profile-head">
-            <div class="bcet-profile-avatar">
+        <div class="bcet-profile-top-row">
+            <div class="bcet-avatar-wrapper">
                 {% if community.group_logo %}
                     <img src="{{ community.group_logo.url }}"
                         alt="{{ community.group_name }}"
                         onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
 
-                    <span class="bcet-avatar-fallback" style="display: none;">
+                    <span class="bcet-avatar-placeholder" style="display: none;">
                         {% with name_list=community.group_name.split %}
                             {{ name_list.0|slice:":1"|upper }}{{ name_list.1|slice:":1"|upper }}
                         {% endwith %}
                     </span>
                 {% else %}
-                    <span class="bcet-avatar-fallback">
+                    <span class="bcet-avatar-placeholder">
                         {% with name_list=community.group_name.split %}
                             {{ name_list.0|slice:":1"|upper }}{{ name_list.1|slice:":1"|upper }}
                         {% endwith %}
@@ -795,79 +973,107 @@
                 {% endif %}
 
                 {% if is_owner %}
-                <a href="{% url 'community_edit' username=community.username %}"
-                class="p-edit"
-                title="Edit Profile">
+                <a href="{% url 'community_edit' username=community.username %}" class="bcet-avatar-edit-badge" title="Edit Profile">
                     <i data-lucide="pencil"></i>
                 </a>
                 {% endif %}
             </div>
 
-            <div class="bcet-profile-details">
-                <div class="bcet-title-row">
-                    <h1 class="bcet-profile-name">{{ community.group_name }}</h1>
-                    <span class="bcet-category-pill">{{ community.get_group_type_display }}</span>
-                </div>
-                <div class="bcet-handle-row">
-                    <span class="bcet-username-handle">@{{ community.username }}{% if community.is_bluetick %}<i data-lucide="badge-check"></i>{% endif %}</span>
-                </div>
-                <p class="bcet-profile-desc">
-                    {{ community.group_dec|default:"Welcome to our official BCET campus club. Follow our latest updates, activities, and events below." }}
-                </p>
+            <div class="bcet-header-actions">
+                {% if is_owner %}
+                    <a href="{% url 'community_post_create' username=community.username %}" class="bcet-btn-primary">
+                        <i data-lucide="plus-circle"></i>
+                        <span>Create Post</span>
+                    </a>
+                    <a href="{% url 'community_logout' %}" class="bcet-btn-outline-danger" title="Logout">
+                        <i data-lucide="log-out"></i>
+                        <span>Logout</span>
+                    </a>
+                {% else %}
+                    {% if community.join %}
+                        <a href="{{ community.join }}" target="_blank" rel="noopener" class="bcet-btn-primary">
+                            <i data-lucide="user-plus"></i>
+                            <span>Join Club</span>
+                        </a>
+                    {% endif %}
+                    <button type="button" onclick="navigator.share ? navigator.share({title: '{{ community.group_name|escapejs }} - BCETHub', url: window.location.href}) : copyCommunityUrl(this)" class="bcet-btn-outline" id="btn-share-club">
+                        <i data-lucide="share-2"></i>
+                        <span>Share</span>
+                    </button>
+                    <a href="{% url 'community_login' %}?next={{ request.path }}" class="bcet-btn-outline" title="Club Login">
+                        <i data-lucide="shield-check"></i>
+                        <span>Club Login</span>
+                    </a>
+                {% endif %}
             </div>
+        </div>
+
+        <div class="bcet-identity-section">
+            <div class="bcet-name-row">
+                <h1 class="bcet-student-name">{{ community.group_name }}</h1>
+                <span class="bcet-badge-pill bcet-pill-dept">
+                    <i data-lucide="tag"></i> {{ community.get_group_type_display }}
+                </span>
+            </div>
+            <div class="bcet-meta-row">
+                <span class="bcet-handle">@{{ community.username }}{% if community.is_bluetick %}<i data-lucide="badge-check" style="color: #0095FF; width: 16px; height: 16px; margin-left: 2px; vertical-align: middle;"></i>{% endif %}</span>
+            </div>
+            <p class="bcet-headline">
+                {{ community.group_dec|default:"Welcome to our official BCET campus club. Follow our latest updates, activities, and events below." }}
+            </p>
         </div>
 
         <!-- Social link chips -->
         <div class="bcet-profile-socials">
             {% if community.instagram %}
-            <a href="{{ community.instagram }}" target="_blank" rel="noopener" class="bcet-chip social-links google-glow-border">
+            <a href="{{ community.instagram }}" target="_blank" rel="noopener" class="bcet-chip social-links">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
                 <span>Instagram</span>
             </a>
             {% endif %}
 
             {% if community.facebook %}
-            <a href="{{ community.facebook }}" target="_blank" rel="noopener" class="bcet-chip social-links google-glow-border">
+            <a href="{{ community.facebook }}" target="_blank" rel="noopener" class="bcet-chip social-links">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
                 <span>Facebook</span>
             </a>
             {% endif %}
 
             {% if community.linkedin %}
-            <a href="{{ community.linkedin }}" target="_blank" rel="noopener" class="bcet-chip social-links google-glow-border">
+            <a href="{{ community.linkedin }}" target="_blank" rel="noopener" class="bcet-chip social-links">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
                 <span>LinkedIn</span>
             </a>
             {% endif %}
 
             {% if community.discord %}
-            <a href="{{ community.discord }}" target="_blank" rel="noopener" class="bcet-chip social-links google-glow-border">
+            <a href="{{ community.discord }}" target="_blank" rel="noopener" class="bcet-chip social-links">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 5.5a16.04 16.04 0 0 0-4.04-1.23A10.85 10.85 0 0 0 13.5 6.2a15.82 15.82 0 0 0-5 0A10.85 10.85 0 0 0 7.04 4.27 16.04 16.04 0 0 0 3 5.5c-2.58 6.02-3.29 11.85-1.42 17.58a16.3 16.3 0 0 0 5.11 2.58c.41-.56.78-1.16 1.09-1.8a10.88 10.88 0 0 1-1.74-.84c.12-.09.24-.19.35-.29 3.34 1.55 6.96 1.55 10.26 0 .12.1.24.2.35.29-.55.32-1.13.6-1.74.84.31.64.68 1.24 1.09 1.8a16.3 16.3 0 0 0 5.12-2.58c2.09-6.33-.48-12.15-1.42-17.58ZM8.82 17.5c-1.01 0-1.84-.94-1.84-2.1 0-1.16.85-2.1 1.84-2.1 1.01 0 1.86.95 1.84 2.1 0 1.16-.84 2.1-1.84 2.1Zm6.36 0c-1.01 0-1.84-.94-1.84-2.1 0-1.16.85-2.1 1.84-2.1 1.01 0 1.86.95 1.84 2.1 0 1.16-.83 2.1-1.84 2.1Z"/></svg>
                 <span>Discord</span>
             </a>
             {% endif %}
 
             {% if community.other %}
-            <a href="{{ community.other }}" target="_blank" rel="noopener" class="bcet-chip social-links google-glow-border">
+            <a href="{{ community.other }}" target="_blank" rel="noopener" class="bcet-chip social-links">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                 <span>{{ community.other_title|default:"Website" }}</span>
             </a>
             {% endif %}
 
             {% if community.join %}
-            <a href="{{ community.join }}" target="_blank" rel="noopener" class="bcet-chip bcet-chip-join social-links google-glow-border">
+            <a href="{{ community.join }}" target="_blank" rel="noopener" class="bcet-chip bcet-chip-join social-links">
                 <i data-lucide="user-plus"></i>
                 <span>Join Club</span>
             </a>
             {% endif %}
 
-            <button type="button" onclick="navigator.share ? navigator.share({title: '{{ community.group_name|escapejs }} - BCETHub', url: window.location.href}) : copyCommunityUrl(this)" class="bcet-chip social-links google-glow-border" id="btn-share-club">
+            <button type="button" onclick="navigator.share ? navigator.share({title: '{{ community.group_name|escapejs }} - BCETHub', url: window.location.href}) : copyCommunityUrl(this)" class="bcet-chip social-links" id="btn-share-club">
                 <i data-lucide="share-2"></i>
                 <span>Share</span>
             </button>
 
             {% if not is_owner %}
-            <a href="{% url 'community_login' %}?next={{ request.path }}" class="bcet-chip bcet-chip-login social-links google-glow-border">
+            <a href="{% url 'community_login' %}?next={{ request.path }}" class="bcet-chip bcet-chip-login social-links">
                 <i data-lucide="shield-check"></i>
                 <span>Club Login</span>
             </a>
@@ -888,11 +1094,11 @@
         <!-- Post filter tabs -->
         <div class="bcet-feed-tabs" id="feed-filter-tabs">
             <button type="button" class="bcet-tab-btn is-active" onclick="filterPosts('all', this)">All ({{ posts|length }})</button>
-            <button type="button" class="bcet-tab-btn google-glow-border" onclick="filterPosts('event', this)">Events</button>
-            <button type="button" class="bcet-tab-btn google-glow-border" onclick="filterPosts('announcement', this)">Announcements</button>
-            <button type="button" class="bcet-tab-btn google-glow-border" onclick="filterPosts('activity', this)">Activities</button>
-            <button type="button" class="bcet-tab-btn google-glow-border" onclick="filterPosts('blog', this)">Blogs</button>
-            <button type="button" class="bcet-tab-btn google-glow-border" onclick="filterPosts('achievement', this)">Achievements</button>
+            <button type="button" class="bcet-tab-btn" onclick="filterPosts('event', this)">Events</button>
+            <button type="button" class="bcet-tab-btn" onclick="filterPosts('announcement', this)">Announcements</button>
+            <button type="button" class="bcet-tab-btn" onclick="filterPosts('activity', this)">Activities</button>
+            <button type="button" class="bcet-tab-btn" onclick="filterPosts('blog', this)">Blogs</button>
+            <button type="button" class="bcet-tab-btn" onclick="filterPosts('achievement', this)">Achievements</button>
         </div>
 
         {% if posts %}

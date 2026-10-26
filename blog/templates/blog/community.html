@@ -1,30 +1,65 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Community & Clubs - BCET{% endblock %}
+{% block title %}Communities & Portfolios - BCETHub{% endblock %}
 
 {% block content %}
 <div class="bcet-community-wrapper">
+    <!-- Hero header -->
     <div class="bcet-hero">
-        <h2 class="bcet-hero-title">Student Clubs &amp; Communities</h2>
-        {% if coming_soon %}
-            <p class="bcet-hero-desc">{{ coming_soon }}</p>
-        {% else %}
-            <p class="bcet-hero-desc">Explore student organizations, build connections, collaborate on projects, and follow official activities.</p>
-        {% endif %}
+        <div class="bcet-hero-content">
+            <h1 class="bcet-hero-title">Campus Communities &amp; Portfolios</h1>
+            <p class="bcet-hero-desc">Explore official student organizations, technical teams, sports clubs, and showcase student portfolios across BCET.</p>
+        </div>
+        <div class="bcet-hero-actions">
+            {% if request.user.is_authenticated %}
+                <a href="{% url 'student_portfolio_profile' username=request.user.username %}" class="bcet-hero-btn">
+                    <i data-lucide="user"></i>
+                    <span>My Portfolio</span>
+                </a>
+            {% else %}
+                <a href="{% url 'create_portfolio_account' %}" class="bcet-hero-btn">
+                    <i data-lucide="sparkles"></i>
+                    <span>Create Portfolio</span>
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    <!-- Category filter tabs -->
+    <div class="bcet-category-nav">
+        <div class="bcet-tabs-container">
+            <button type="button" class="bcet-nav-tab is-active" data-tab="all" onclick="filterCategoryTab('all', this)">
+                <i data-lucide="layout-grid"></i>
+                <span>All</span>
+            </button>
+            <button type="button" class="bcet-nav-tab" data-tab="tech" onclick="filterCategoryTab('tech', this)">
+                <i data-lucide="code-2"></i>
+                <span>Tech</span>
+            </button>
+            <button type="button" class="bcet-nav-tab" data-tab="sports" onclick="filterCategoryTab('sports', this)">
+                <i data-lucide="trophy"></i>
+                <span>Sports</span>
+            </button>
+            <button type="button" class="bcet-nav-tab" data-tab="social" onclick="filterCategoryTab('social', this)">
+                <i data-lucide="users"></i>
+                <span>Social</span>
+            </button>
+        </div>
     </div>
 
+    <!-- Content area -->
     <div class="bcet-content-area">
         {% regroup community by get_group_type_display as grouped_clubs %}
 
+        <!-- Club groups -->
         {% for group in grouped_clubs %}
-            <div class="bcet-group-block">
+            <div class="bcet-group-block" data-category="{{ group.grouper|lower }}">
                 <div class="bcet-group-header">
                     <div class="bcet-group-left">
                         <span class="bcet-indicator"></span>
-                        <h2 class="bcet-group-title">{{ group.grouper }}</h2>
+                        <h2 class="bcet-group-title">{{ group.grouper }} Clubs</h2>
                     </div>
-                    <span class="bcet-group-counter">{{ group.list|length }} Active</span>
+                    <span class="bcet-group-counter"><span class="bcet-group-active-count">{{ group.list|length }}</span> Active</span>
                 </div>
 
                 <div class="bcet-card-grid">
@@ -33,14 +68,687 @@
                     {% endfor %}
                 </div>
             </div>
-        {% empty %}
-            <div class="bcet-empty-view">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                <h3>No clubs available</h3>
-                <p>New campus groups will be listed here soon.</p>
-            </div>
         {% endfor %}
+
+        <!-- Student portfolios -->
+        <div class="bcet-group-block" data-category="social" data-is-portfolio="true">
+            <div class="bcet-group-header">
+                <div class="bcet-group-left">
+                    <span class="bcet-indicator" style="background: #0284c7;"></span>
+                    <h2 class="bcet-group-title">Student Portfolios</h2>
+                </div>
+                <span class="bcet-group-counter"><span class="bcet-group-active-count">{{ portfolios|length }}</span> Public</span>
+            </div>
+
+            {% if portfolios %}
+                <div class="bcet-card-grid">
+                    {% for port in portfolios %}
+                        <div class="bcet-club-card bcet-student-card bcet-searchable-card" data-category="social" data-name="{{ port.display_name|lower }}" data-username="{{ port.user.username|lower }}" data-desc="{{ port.headline|default:port.bio|default:''|lower }}" data-dept="{{ port.department|default:''|lower }}" data-skills="{{ port.skills|default:''|lower }}" data-extra="{{ port.batch_year|default:''|lower }}">
+                            <!-- Mini banner -->
+                            <div class="{% if port.profile_pic %}profile-banner{% else %}bcet-mini-banner{% endif %}">
+                                {% if port.banner %}
+                                    <img src="{{ port.banner.url }}" alt="{{ port.display_name }} Banner" class="bcet-mini-banner-img">
+                                {% elif port.profile_pic %}
+                                    <img src="{{ port.profile_pic.url }}" alt="{{ port.display_name }} Banner" class="bcet-mini-banner-img-profile">
+                                {% else %}
+                                    <div class="bcet-mini-banner-pattern"></div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Avatar and action -->
+                            <div class="bcet-card-head">
+                                <a href="{% url 'student_portfolio_profile' username=port.user.username %}" class="bcet-club-link">
+                                    <div class="bcet-club-avatar {% if port.is_bluetick and port.profile_pic.url %}bcet-avatar-wrapper-bluetick{% endif %}">
+                                        {% if port.profile_pic %}
+                                            <img src="{{ port.profile_pic.url }}" alt="{{ port.display_name }}" {% if port.is_bluetick and port.profile_pic.url %}class="bcet-avatar-img-bluetick"{% endif %}>
+                                        {% else %}
+                                            <img src="{% static 'img/defult.jpeg' %}" alt="{{ port.display_name }}" {% if port.is_bluetick and port.profile_pic.url %}class="bcet-avatar-img-bluetick"{% endif %}>
+                                            <!-- <span>{{ port.user.username|slice:":2"|upper }}</span> -->
+                                        {% endif %}
+                                    </div>
+                                </a>
+                            </div>
+
+                            <!-- Student details -->
+                            <div class="bcet-card-info-wrap">
+                                <h3 class="bcet-club-name">
+                                    <a href="{% url 'student_portfolio_profile' username=port.user.username %}" class="bcet-club-link">
+                                        {{ port.display_name }}
+                                    </a>
+                                </h3>
+                                <span class="bcet-club-username">
+                                    @{{ port.user.username }}
+                                    {% if port.is_bluetick %}
+                                        <i data-lucide="badge-check" style="color: #0095FF; width: 14px; height: 14px; margin-left: 2px; vertical-align: middle;"></i>
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                            <div class="bcet-card-body">
+                                {% if port.department or port.batch_year or port.calculated_academic_year %}
+                                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;">
+                                        {% if port.calculated_academic_year %}
+                                            <span class="bcet-pill-batch">
+                                                {{ port.calculated_academic_year }}
+                                            </span>
+                                        {% elif port.batch_year %}
+                                            <span class="bcet-pill-batch">
+                                                BCET '{{ port.batch_year }}
+                                            </span>
+                                        {% endif %}
+                                        {% if port.department %}
+                                            <span class="bcet-pill-dept-card">
+                                                {{ port.department|truncatechars:28 }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+
+                                <p class="bcet-club-desc">
+                                    {{ port.headline|default:port.bio|default:"Student at BCET. Click to explore portfolio, skills, projects, and connect links."|truncatechars:120 }}
+                                </p>
+
+                                {% if port.skills_list %}
+                                    <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px;">
+                                        {% for skill in port.skills_list|slice:":3" %}
+                                            <a href="https://www.google.com/search?q=What+is+{{ skill|urlencode }}?" target="_blank" class="bcet-skill-tag" title="{{skill}}">
+                                                {{ skill }}
+                                            </a>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="bcet-card-foot">
+                                <div class="bcet-social-group">
+                                    {% if port.github %}
+                                        <a href="{{ port.github }}" target="_blank" rel="noopener noreferrer" class="bcet-social-btn social-links" title="GitHub">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+                                            <span>GitHub</span>
+                                        </a>
+                                    {% endif %}
+                                    {% if port.linkedin %}
+                                        <a href="{{ port.linkedin }}" target="_blank" rel="noopener noreferrer" class="bcet-social-btn social-links" title="LinkedIn">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+                                            <span>LinkedIn</span>
+                                        </a>
+                                    {% endif %}
+                                    {% if port.website %}
+                                        <a href="{{ port.website }}" target="_blank" rel="noopener noreferrer" class="bcet-social-btn social-links" title="Website">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                            <span>Website</span>
+                                        </a>
+                                    {% endif %}
+                                    {% if port.is_bluetick and port.instagram %}
+                                        <a href="{{ port.instagram_url }}" target="_blank" rel="noopener noreferrer" class="bcet-social-btn social-links" title="Instagram">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+                                            <span>Instagram</span>
+                                        </a>
+                                    {% endif %}
+                                    <button type="button" onclick="navigator.share ? navigator.share({title: '{{ port.display_name|escapejs }} - BCETHub Portfolio', url: window.location.origin + '{% url 'student_portfolio_profile' username=port.user.username %}'}) : copyUrl(window.location.origin + '{% url 'student_portfolio_profile' username=port.user.username %}')" class="bcet-social-btn social-links" title="Share Portfolio">
+                                        <i data-lucide="share-2" style="width: 16px; height: 16px;"></i>
+                                        <span>Share</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="bcet-empty-view">
+                    <i data-lucide="users" style="width: 36px; height: 36px; color: var(--text-muted); margin-bottom: 8px;"></i>
+                    <h3>No public student portfolios yet</h3>
+                    <p>Be the first to create and publish your BCET student portfolio.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Empty search state -->
+        <div id="no-category-results" class="bcet-empty-view" style="display: none;">
+            <i data-lucide="folder-search" style="width: 44px; height: 44px; color: var(--text-muted); margin-bottom: 8px;"></i>
+            <h3 id="no-results-title">No entries found</h3>
+            <p id="no-results-desc">No clubs or student portfolios match your search criteria.</p>
+            <button type="button" onclick="clearCommunitySearch()" class="bcet-btn-primary" style="margin-top: 14px; font-size: 13px; padding: 7px 16px;">
+                <span>Clear Filter</span>
+            </button>
+        </div>
     </div>
 </div>
 
+<!-- Category tab filter -->
+<script>
+let currentActiveCategory = 'all';
+
+function filterCategoryTab(category, btn) {
+    currentActiveCategory = category;
+    document.querySelectorAll('.bcet-nav-tab').forEach(t => t.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    applyCategoryVisibility();
+}
+
+function applyCategoryVisibility() {
+    const blocks = document.querySelectorAll('.bcet-group-block');
+    let visibleCount = 0;
+
+    blocks.forEach(block => {
+        const blockCat = (block.getAttribute('data-category') || '').toLowerCase();
+        if (currentActiveCategory === 'all' || blockCat === currentActiveCategory.toLowerCase()) {
+            block.style.display = 'block';
+            const cards = block.querySelectorAll('.bcet-searchable-card');
+            cards.forEach(c => c.style.display = 'flex');
+            visibleCount += cards.length;
+        } else {
+            block.style.display = 'none';
+        }
+    });
+
+    const noResults = document.getElementById('no-category-results');
+    if (noResults) {
+        noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+    }
+}
+
+function copyUrl(url) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => {
+            alert("Link copied to clipboard!");
+        });
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+</script>
+
+<style>
+    .bcet-community-wrapper {
+        width: 100%;
+        max-width: 1240px;
+        margin: -20px auto 50px;
+        box-sizing: border-box;
+    }
+
+    /* Hero header */
+    .bcet-hero {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 24px 28px;
+        margin: 20px 0 16px 0;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        flex-wrap: wrap;
+    }
+
+    .bcet-hero-content {
+        flex: 1 1 360px;
+    }
+
+    .bcet-hero-title {
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0 0 6px 0;
+        letter-spacing: -0.3px;
+    }
+
+    .bcet-hero-desc {
+        font-size: 14px;
+        color: var(--text-muted);
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    .bcet-hero-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .bcet-hero-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #0284c7;
+        color: #ffffff;
+        padding: 10px 18px;
+        border-radius: 9px;
+        font-size: 13.5px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: background-color 0.15s ease;
+    }
+
+    .bcet-hero-btn:hover {
+        background: #0369a1;
+    }
+
+    .bcet-hero-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    /* Category navigation tabs */
+    .bcet-category-nav {
+        margin-bottom: 24px;
+    }
+
+    .bcet-tabs-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 6px;
+        width: fit-content;
+        max-width: 100%;
+        overflow-x: auto;
+    }
+
+    .bcet-nav-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 18px;
+        background: transparent;
+        color: var(--text-muted);
+        border: none;
+        border-radius: 8px;
+        font-size: 13.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        white-space: nowrap;
+    }
+
+    .bcet-nav-tab:hover {
+        color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.04);
+    }
+
+    .bcet-nav-tab.is-active {
+        background: #0284c7;
+        color: #ffffff;
+        box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);
+    }
+
+    .bcet-nav-tab svg {
+        width: 15px;
+        height: 15px;
+    }
+
+    /* Group block */
+    .bcet-group-block {
+        margin-bottom: 34px;
+    }
+
+    .bcet-group-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .bcet-group-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .bcet-indicator {
+        width: 4px;
+        height: 18px;
+        border-radius: 4px;
+        background: #22c55e;
+    }
+
+    .bcet-group-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .bcet-group-counter {
+        font-size: 12px;
+        color: var(--text-muted);
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border-color);
+        padding: 3px 9px;
+        border-radius: 20px;
+    }
+
+    .bcet-card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 20px;
+    }
+
+    /* Unified Club & Student Cards */
+    .bcet-club-card {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        box-sizing: border-box;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .bcet-club-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+        border-color: #0284c7;
+    }
+
+    /* Mini cover banner */
+    .bcet-mini-banner {
+        width: 100%;
+        height: 75px;
+        background: linear-gradient(135deg, #091322 0%, #172554 60%, #0369a1 100%);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .profile-banner {
+        width: 100%;
+        height: 75px;
+        background: var(--card-bg);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .bcet-mini-banner::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.45) 100%);
+        pointer-events: none;
+    }
+
+    .bcet-mini-banner-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .bcet-mini-banner-img-profile {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        filter: blur(3px);
+        transform: scale(1.05);
+    }
+
+    .bcet-mini-banner-pattern {
+        position: absolute;
+        inset: 0;
+        opacity: 0.2;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px);
+        background-size: 12px 12px;
+    }
+
+    .club-pattern {
+        background-image: radial-gradient(rgba(56, 189, 248, 0.5) 1px, transparent 1px);
+    }
+
+    /* Avatar and action button row */
+    .bcet-card-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        padding: 0 16px;
+        margin-top: -30px;
+        position: relative;
+        z-index: 2;
+    }
+
+    .bcet-club-avatar {
+        width: 58px;
+        height: 58px;
+        min-width: 58px;
+        border-radius: 50%;
+        background: var(--text-primary);
+        border: 3px solid var(--card-bg);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 18px;
+    }
+
+    .bcet-avatar-wrapper-bluetick {
+        box-shadow: 0 0px 25px rgb(1, 70, 111);
+        border: 3px solid rgb(2, 115, 184);
+    }
+    
+    .bcet-club-avatar img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .bcet-avatar-img-bluetick {
+        border: 2px solid var(--bg-color);
+    }
+
+    .bcet-club-avatar span {
+        background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%);
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .bcet-btn-join {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 14px;
+        background-color: var(--card-bg);
+        color: var(--text-primary);
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        font-size: 12.5px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: background-color 0.15s ease;
+    }
+
+    .bcet-btn-join:hover {
+        background-color: var(--text-primary);
+        color: var(--card-bg);
+    }
+
+    /* Title row */
+    .bcet-card-info-wrap {
+        padding: 10px 16px 0 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .bcet-club-name {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+        line-height: 1.35;
+    }
+
+    .bcet-club-link {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .bcet-club-link:hover {
+        color: #0284c7;
+    }
+
+    .bcet-club-username {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--text-muted);
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+    }
+
+    /* Card body */
+    .bcet-card-body {
+        padding: 12px 16px;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+
+    .bcet-tag-category {
+        font-size: 11px;
+        padding: 2px 7px;
+        border-radius: 4px;
+        background: rgba(2, 132, 199, 0.12);
+        color: #0284c7;
+        font-weight: 700;
+    }
+
+    .bcet-pill-batch {
+        font-size: 11px;
+        padding: 2px 7px;
+        border-radius: 4px;
+        background: rgba(2, 132, 199, 0.12);
+        color: #0284c7;
+        font-weight: 700;
+    }
+
+    .bcet-pill-dept-card {
+        font-size: 11px;
+        padding: 2px 7px;
+        border-radius: 4px;
+        background: rgba(148, 163, 184, 0.1);
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+
+    .bcet-skill-tag {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+        text-decoration: none;
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .bcet-club-desc {
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--text-muted);
+        margin: 0;
+    }
+
+    /* Card foot */
+    .bcet-card-foot {
+        padding: 12px 16px;
+        border-top: 1px solid var(--border-color);
+        margin-top: auto;
+    }
+
+    .bcet-social-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .bcet-social-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--text-primary);
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .bcet-social-btn:hover {
+        border-color: #0284c7;
+        color: var(--text-primary);
+        transform: translateY(-1px);
+    }
+
+    .bcet-social-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .bcet-empty-view {
+        text-align: center;
+        padding: 40px 20px;
+        background: var(--card-bg);
+        border: 1px dashed var(--border-color);
+        border-radius: 14px;
+        color: var(--text-muted);
+    }
+
+    .bcet-empty-view h3 {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 4px 0;
+    }
+
+    .bcet-empty-view p {
+        font-size: 13.5px;
+        margin: 0;
+    }
+
+    @media (max-width: 640px) {
+        .bcet-hero {
+            padding: 18px 16px;
+        }
+
+        .bcet-hero-title {
+            font-size: 20px;
+        }
+
+        .bcet-tabs-container {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        .bcet-nav-tab {
+            padding: 7px 12px;
+            font-size: 12.5px;
+        }
+
+        .bcet-card-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
 {% endblock %}

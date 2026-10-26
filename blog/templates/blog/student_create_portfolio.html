@@ -1,0 +1,436 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Student Portfolio - BCETHub{% endblock %}
+
+{% block content %}
+<div class="bcet-login-wrapper">
+    <div class="bcet-login-card">
+        <div class="bcet-login-header">
+            <div class="bcet-login-icon">
+                <i data-lucide="sparkles"></i>
+            </div>
+            <h2>Create Student Portfolio</h2>
+            <p>Only official BCET email (<code>gdg bcet gmail</code>) is accepted.</p>
+        </div>
+
+        {% if step == 'verify' %}
+            <!-- Verify OTP -->
+            <div class="bcet-info-box">
+                <div class="bcet-info-row">
+                    <span class="bcet-info-label"><i data-lucide="mail"></i> Email:</span>
+                    <strong class="bcet-info-val">{{ email }}</strong>
+                </div>
+                <div class="bcet-info-row">
+                    <span class="bcet-info-label"><i data-lucide="at-sign"></i> Default Username:</span>
+                    <strong class="bcet-info-val" style="color: #38bdf8;">@{{ username }}</strong>
+                </div>
+            </div>
+
+            <form method="POST" action="{% url 'create_portfolio_account' %}" class="bcet-login-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="verify_otp">
+                
+                <div class="bcet-form-field">
+                    <label for="otp">
+                        <i data-lucide="key-round"></i> Enter 6-Digit OTP
+                    </label>
+                    <div class="bcet-input-wrap">
+                        <input 
+                            type="text" 
+                            id="otp" 
+                            name="otp" 
+                            maxlength="6" 
+                            placeholder="······" 
+                            required 
+                            autofocus 
+                            class="bcet-input bcet-input-otp"
+                        >
+                    </div>
+                    <span style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                        OTP has been sent to your email (check inbox and spam).
+                    </span>
+                </div>
+
+                <button type="submit" class="bcet-btn-login">
+                    <i data-lucide="badge-check"></i>
+                    <span>Verify OTP & Create Portfolio</span>
+                </button>
+            </form>
+
+            <form method="POST" action="{% url 'create_portfolio_account' %}" style="margin-top: 10px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reset">
+                <button type="submit" class="bcet-btn-secondary" style="width: 100%;">
+                    <i data-lucide="arrow-left"></i>
+                    <span>Change Email / Go Back</span>
+                </button>
+            </form>
+
+        {% else %}
+            <!-- Registration Form -->
+            <form method="POST" action="{% url 'create_portfolio_account' %}" class="bcet-login-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="send_otp">
+
+                <div class="bcet-form-field">
+                    <label for="email">
+                        <i data-lucide="mail"></i>BCET Email
+                    </label>
+                    <div class="bcet-input-wrap">
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email" 
+                            value="{{ email }}"
+                            placeholder="bcet gmail formatformat" 
+                            required 
+                            autofocus 
+                            class="bcet-input"
+                            hx-get="{% url 'check_student_email' %}"
+                            hx-trigger="keyup changed delay:300ms, load"
+                            hx-target="#email-live-status"
+                        >
+                    </div>
+                    <div id="email-live-status" class="bcet-live-status"></div>
+                </div>
+
+                <div class="bcet-form-field">
+                    <label for="password1">
+                        <i data-lucide="lock"></i> Password
+                    </label>
+                    <div class="bcet-input-wrap">
+                        <input 
+                            type="password" 
+                            id="password1" 
+                            name="password1" 
+                            placeholder="Enter password (min 6 chars)" 
+                            required 
+                            class="bcet-input"
+                        >
+                    </div>
+                </div>
+
+                <div class="bcet-form-field">
+                    <label for="password2">
+                        <i data-lucide="check-circle"></i> Confirm Password
+                    </label>
+                    <div class="bcet-input-wrap">
+                        <input 
+                            type="password" 
+                            id="password2" 
+                            name="password2" 
+                            placeholder="Re-enter password" 
+                            required 
+                            class="bcet-input"
+                        >
+                    </div>
+                </div>
+
+                <button type="submit" class="bcet-btn-login">
+                    <i data-lucide="send"></i>
+                    <span>Send Verification OTP</span>
+                </button>
+            </form>
+        {% endif %}
+
+        <div class="bcet-login-footer">
+            <p style="font-size: 13.5px;">
+                Already have an account? 
+                <a href="{% url 'student_login' %}" style="color: #0284c7; text-decoration: none; font-weight: 700; margin-left: 4px;">
+                    Sign In
+                </a>
+            </p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%;">
+                <a href="{% url 'community_login' %}" class="bcet-social-btn">
+                    <i data-lucide="users"></i>
+                    <span>Club Login</span>
+                </a>
+                <a href="{% url 'home' %}" class="bcet-social-btn">
+                    <i data-lucide="home"></i>
+                    <span>Home</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bcet-login-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 75vh;
+        padding: 24px 16px;
+    }
+
+    .bcet-login-card {
+        width: 100%;
+        max-width: 460px;
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 30px 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .bcet-login-header {
+        text-align: center;
+        margin-bottom: 24px;
+    }
+
+    .bcet-login-icon {
+        width: 52px;
+        height: 52px;
+        margin: 0 auto 12px;
+        border-radius: 50%;
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        color: #0284c7;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .bcet-login-icon svg {
+        width: 26px;
+        height: 26px;
+    }
+
+    .bcet-login-header h2 {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 6px 0;
+    }
+
+    .bcet-login-header p {
+        font-size: 13px;
+        color: var(--text-muted);
+        line-height: 1.5;
+        margin: 0;
+    }
+
+    .bcet-login-header code {
+        background: rgba(255, 255, 255, 0.08);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #38bdf8;
+    }
+
+    .bcet-info-box {
+        background: rgba(2, 132, 199, 0.08);
+        border: 1px solid rgba(2, 132, 199, 0.25);
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+    }
+
+    .bcet-info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .bcet-info-label {
+        color: var(--text-muted);
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .bcet-info-label svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .bcet-info-val {
+        color: var(--text-primary);
+        word-break: break-all;
+    }
+
+    .bcet-login-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .bcet-form-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .bcet-form-field label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .bcet-form-field label svg {
+        width: 14px;
+        height: 14px;
+        color: var(--text-muted);
+    }
+
+    .bcet-input-wrap {
+        display: flex;
+        align-items: center;
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+        transition: border-color 0.15s ease;
+    }
+
+    .bcet-input-wrap:focus-within {
+        border-color: #0284c7;
+    }
+
+    .bcet-input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        padding: 10px 12px;
+        color: var(--text-primary);
+        font-size: 14px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .bcet-input-otp {
+        letter-spacing: 8px;
+        font-size: 20px;
+        font-weight: 700;
+        text-align: center;
+        font-family: monospace;
+    }
+
+    .bcet-input::placeholder {
+        color: var(--text-muted);
+    }
+
+    .bcet-live-status {
+        margin-top: 4px;
+        min-height: 18px;
+        font-size: 12.5px;
+    }
+
+    .bcet-btn-login {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 11px 16px;
+        background-color: #0284c7;
+        border: 1px solid #0284c7;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #ffffff;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        margin-top: 6px;
+    }
+
+    .bcet-btn-login:hover {
+        background-color: #0369a1;
+        border-color: #0369a1;
+    }
+
+    .bcet-btn-login svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .bcet-btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: transparent;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--text-primary);
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .bcet-btn-secondary:hover {
+        border-color: #0284c7;
+        background: rgba(2, 132, 199, 0.08);
+    }
+
+    .bcet-btn-secondary svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .bcet-social-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 14px;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: all 0.15s ease;
+    }
+
+    .bcet-social-btn:hover {
+        border-color: #0284c7;
+        color: #ffffff;
+    }
+
+    .bcet-social-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .bcet-login-footer {
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border-color);
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .bcet-login-footer p {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+    }
+
+    .bcet-login-footer p svg {
+        width: 13px;
+        height: 13px;
+    }
+</style>
+{% endblock %}

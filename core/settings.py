@@ -1,12 +1,13 @@
 from pathlib import Path
+from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-!d9g(t+zz^*9(f*!5tj_+$az+p56aobz1@auxk^=i^+)jwrt6x'
+SECRET_KEY = config('SECRET_KEY')
 
-DEBUG = True
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = ['bcet.pythonanywhere.com','*']
+ALLOWED_HOSTS = ['bcet.pythonanywhere.com', '*']
 
 INSTALLED_APPS = [
     'jazzmin',
@@ -140,3 +141,12 @@ JAZZMIN_UI_TWEAKS = {
     "sidebar": "sidebar-dark-primary",
     "accent": "accent-primary"
 }
+
+# Email Config:
+EMAIL_BACKEND = config('EMAIL_BACKEND')
+EMAIL_HOST = config('EMAIL_HOST')
+EMAIL_PORT = config('EMAIL_PORT')
+EMAIL_USE_TLS = config('EMAIL_USE_TLS')
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

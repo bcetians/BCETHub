@@ -2,9 +2,12 @@ from django.http import request
 import os
 import datetime
 from django.conf import settings
-from django.shortcuts import render, redirect, HttpResponse
+from django.shortcuts import render, redirect, HttpResponse,  get_object_or_404
 from django.contrib import messages
-from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout, get_user_model
+from django.contrib.auth import (
+    authenticate, login as auth_login, logout as auth_logout,
+    get_user_model, update_session_auth_hash
+)
 from django.utils import timezone
 from django.http import JsonResponse
 from django.db.models import Q
@@ -12,7 +15,7 @@ from .models import (
     Branch, AcademicYear, Pooling, Faculty, InductionProgram, RoutineSlot, 
     MessTiming, DailyMessMenu, Feedback, Section, Notes, Course, Subject, 
     PYQ, Assignment, Notice, Community, CommunityGroupType, 
-    CommunityPost, CommunityPostImage, Holiday
+    CommunityPost, CommunityPostImage, StudentPortfolio
 )
 from .routine_utils import (
     read_routine_csv, get_routine_file_version, get_filtered_routine_csv,
@@ -21,6 +24,21 @@ from .routine_utils import (
 from urllib.parse import urlparse
 from django.contrib.auth.decorators import login_required
 import re
+import random
+from django.core.mail import send_mail
+from .email_content import (
+    send_signup_otp_email,
+    send_verification_success_email,
+    send_welcome_email,
+    send_login_alert_email,
+    send_password_reset_otp_email,
+    send_password_reset_success_email,
+    send_email_change_otp,
+    send_email_changed_success
+)
+from django.db.models import Case, When, F, IntegerField
+from datetime import date, datetime, time, timedelta
+from decouple import config
 
 User = get_user_model()
 
@@ -44,13 +62,32 @@ RESTRICTED_USERNAMES = {
     "rishabh",
     "sahil",
     "rishabhkumar",
-    "sahilkumar"
+    "kumarrishabh",
+    "sahilkumar",
+    "kumarsahil",
+    "kumar",
+    "edit",
+    "student",
+    "feedback",
+    "attendance",
+    "about"
 }
+
+# Student email pattern
+STUDENT_EMAIL_REGEX = config('STUDENT_EMAIL_REGEX') 
+
+
+# Club email pattern
+CLUB_EMAIL_REGEX = config('CLUB_EMAIL_REGEX')
 
 # Greeting Function
 def get_greeting(request):
     now = timezone.localtime()
     current_hour = now.hour
+    username = "BCETians"
+
+    if request.user.username:
+        username = f'@{request.user.username}'
 
     if 4 <= current_hour < 12:
         greeting = "Good Morning"
@@ -59,9 +96,7 @@ def get_greeting(request):
     else:
         greeting = "Good Evening"
 
-    username = request.user.username
-
-    return HttpResponse(f"<strong>{greeting}, <span>@{username}</span></strong>")
+    return HttpResponse(f"<strong>{greeting}, <span>{username}</span></strong>")
 
 DAYS_MAP = {
     0: ('MON', 'Monday'),
@@ -274,14 +309,6 @@ def home(request):
     is_routine_live = (live_slot is not None)
     is_meal_live = displayed_meal['is_serving']
 
-    # check holiday
-    if Holiday.objects.filter(is_class=True).filter(Q(holiday_start__lte=today_date, holiday_end__gte=today_date) | Q(holiday_start=today_date, holiday_end__isnull=True) | Q(holiday_start__isnull=True, holiday_end=today_date)).exists():
-        is_routine_live = False
-
-    if Holiday.objects.filter(is_mess=True).filter(Q(holiday_start__lte=today_date, holiday_end__gte=today_date) | Q(holiday_start=today_date, holiday_end__isnull=True) | Q(holiday_start__isnull=True, holiday_end=today_date)).exists():
-        is_meal_live = False
-        displayed_meal['is_serving'] = False
-
     if is_induction_live:
         p_induction = 1
         p_routine = 2
@@ -382,6 +409,7 @@ def get_search_data(query):
     assignments_results = None
     pyqs_results = None
     community_results = None
+    portfolio_results = None
     post_results = None
 
     if query:
@@ -504,9 +532,29 @@ def get_search_data(query):
             comm_q |= (
                 Q(group_name__icontains=w) |
                 Q(group_dec__icontains=w) |
-                Q(group_type__name__icontains=w)
+                Q(group_type__name__icontains=w) |
+                Q(user__username__icontains=w)
             )
         community_results = Community.objects.filter(Q(is_active=True) & comm_q).select_related('group_type', 'user').distinct()[:15]
+
+        # Student portfolios search
+        port_q = (
+            Q(full_name__icontains=query) |
+            Q(user__username__icontains=query) |
+            Q(department__icontains=query) |
+            Q(headline__icontains=query) |
+            Q(bio__icontains=query) |
+            Q(skills__icontains=query) |
+            Q(batch_year__icontains=query)
+        )
+        for w in terms:
+            port_q |= (
+                Q(full_name__icontains=w) |
+                Q(user__username__icontains=w) |
+                Q(department__icontains=w) |
+                Q(skills__icontains=w)
+            )
+        portfolio_results = StudentPortfolio.objects.filter(Q(is_public=True, is_block=False) & port_q).select_related('user').distinct()[:15]
 
         post_q = (
             Q(title__icontains=query) |
@@ -534,19 +582,20 @@ def get_search_data(query):
         'assignments_results': assignments_results,
         'pyqs_results': pyqs_results,
         'community_results': community_results,
+        'portfolio_results': portfolio_results,
         'post_results': post_results,
     }
 
 # Live search view
 def live_search(request):
-    query = request.GET.get('q', '').strip()
+    query = (request.GET.get('q') or request.GET.get('query') or '').strip()
     data = get_search_data(query)
     data['query'] = query
     return render(request, 'blog/includes/live_search_results.html', data)
 
 # Search page view
 def search(request):
-    query = request.GET.get('q', '').strip()
+    query = (request.GET.get('q') or request.GET.get('query') or '').strip()
     data = get_search_data(query)
     data['query'] = query
     data['now'] = get_ist_now()
@@ -892,16 +941,41 @@ def assignments(request):
     }
     return render(request, 'blog/assignments.html', context)
 
-# show community list
+# Community list
 def community(request):
-    community = Community.objects.filter(is_active=True).select_related('group_type', 'user').order_by('-group_type__name', 'id')    
+    communities_qs = Community.objects.filter(is_active=True).select_related('group_type', 'user')
+    
+    communities = sorted(
+        communities_qs,
+        key=lambda c: (c.group_type.name if c.group_type and c.group_type.name else "", c.id),
+        reverse=True  # Descending (Z se A) order 
+    )
+
+    # 1. Blue Tick (is_bluetick=True)  -> Old account first, then New (+id)
+    # 2. Without Blue Tick (False)     -> New account first, then Old (-id)
+    portfolios = (
+        StudentPortfolio.objects.filter(is_public=True, is_block=False)
+        .select_related('user')
+        .annotate(
+            sort_order=Case(
+                When(is_bluetick=True, then=F('id')),
+                default=0 - F('id'),
+                output_field=IntegerField(),
+            )
+        )
+        .order_by('-is_bluetick', 'sort_order')
+    )
+
+    group_types = CommunityGroupType.objects.all().order_by('id')
+
     context = {
-        "community": community,
-        "coming_soon": "Community features are rolling out step by step. Stay tuned as new tools arrive!"
+        "community": communities,
+        "portfolios": portfolios,
+        "group_types": group_types,
     }
     return render(request, 'blog/community.html', context)
 
-# single community profile
+# Community profile
 def community_page(request, username):
     community = Community.objects.filter(user__username__iexact=username, is_active=True).select_related('group_type', 'user').first()
     if not community:
@@ -909,7 +983,7 @@ def community_page(request, username):
 
     is_owner = request.user.is_authenticated and (request.user == community.user or request.user.is_superuser)
     
-    # get club posts
+    # Club posts
     if is_owner:
         posts = community.posts.all().prefetch_related('images').order_by('-created_at')
     else:
@@ -922,7 +996,7 @@ def community_page(request, username):
     }
     return render(request, 'blog/includes/community_page.html', context)
 
-# View post detail
+# Post detail
 def community_post_detail(request, username, slug):
     community = Community.objects.filter(user__username__iexact=username, is_active=True).select_related('group_type', 'user').first()
     if not community:
@@ -1160,25 +1234,25 @@ def community_post_delete(request, username, post_id):
         messages.success(request, "Post deleted successfully.")
     return redirect('community_page', username=username)
 
-# username check
+# Check username
 @login_required(login_url='community_login')
 def check_username(request):
-    username = request.GET.get("user_name", "").strip()
-    current_username = request.GET.get("current_username", "").strip()
+    username = (request.GET.get("user_name") or request.GET.get("username") or "").strip().lower()
+    current_username = (request.GET.get("current_username") or "").strip().lower()
 
     if not username:
         return HttpResponse(
-            '<span style="color:red">Username required</span>'
+            '<span style="color: #ef4444; font-size: 13px;">Username required</span>'
         )
     
-    if len(username)<4:
+    if len(username) < 4:
         return HttpResponse(
-            '<span style="color:red">Username must be at least 4 characters long.</span>'
+            '<span style="color: #ef4444; font-size: 13px;">Must be at least 4 characters</span>'
         )
 
     if not re.fullmatch(r"[a-z0-9_.]{1,20}", username):
         return HttpResponse(
-            '<span style="color:red">Only lowercase letters, numbers, _ and . allowed</span>'
+            '<span style="color: #ef4444; font-size: 13px;">Only lowercase letters, numbers, _ and . allowed</span>'
         )
 
     if (
@@ -1187,28 +1261,28 @@ def check_username(request):
         or ".." in username
     ):
         return HttpResponse(
-            '<span style="color:red">Invalid username format</span>'
+            '<span style="color: #ef4444; font-size: 13px;">Invalid username format</span>'
         )
 
     if username in RESTRICTED_USERNAMES:
         return HttpResponse(
-            '<span style="color:red">This username is reserved</span>'
+            '<span style="color: #ef4444; font-size: 13px;">This username is reserved</span>'
         )
 
-    # Current username ko pehchano
+    # Current username
     if username == current_username:
         return HttpResponse(
-            '<span style="color:gray">This is your current username</span>'
+            '<span style="color: #94a3b8; font-size: 13px;">This is your current username</span>'
         )
 
-    # Baaki users ke usernames check karo
+    # Check existence
     if User.objects.filter(username__iexact=username).exists():
         return HttpResponse(
-            '<span style="color:red">Username already exists</span>'
+            '<span style="color: #ef4444; font-size: 13px;">Username already exists</span>'
         )
 
     return HttpResponse(
-        '<span style="color:green">Username available</span>'
+        '<span style="color: #22c55e; font-size: 13px;">Username available</span>'
     )
 
 # community edit
@@ -1283,27 +1357,34 @@ def community_edit(request, username):
             )
 
         else:
-            # Update username only when valid
+            # Update username
             community.user.username = user_name
             community.user.save(update_fields=['username'])
 
-            # Update community details
+            # Update club email
+            club_email = request.POST.get('email', '').strip().lower()
+            if club_email and club_email != (community.user.email or '').strip().lower():
+                if not re.fullmatch(CLUB_EMAIL_REGEX, club_email):
+                    messages.error(request, "Club email must be a valid @gmail.com address.")
+                    return redirect('community_edit_slash', username=community.user.username)
+                if User.objects.filter(email__iexact=club_email).exclude(pk=community.user_id).exists():
+                    messages.error(request, "This email is already in use by another account.")
+                    return redirect('community_edit_slash', username=community.user.username)
+                community.user.email = club_email
+                community.user.save(update_fields=['email'])
+
+            # Details
             community.group_name = group_name
             community.group_dec = group_dec
 
-            # Update group type
+            # Group category
             group_type_id = request.POST.get('group_type')
-
             if group_type_id:
-                community.group_type = (
-                    CommunityGroupType.objects.filter(
-                        pk=group_type_id
-                    ).first()
-                )
-            else:
-                community.group_type = None
+                gt = CommunityGroupType.objects.filter(pk=group_type_id).first()
+                if gt:
+                    community.group_type = gt
 
-            # Update social links
+            # Social links
             for field in [
                 'instagram',
                 'facebook',
@@ -1319,9 +1400,25 @@ def community_edit(request, username):
                     request.POST.get(field, '').strip()
                 )
 
-            # Update logo only if a new file is uploaded
-            if request.FILES.get('group_logo'):
+            # Logo handling
+            if request.POST.get('clear_group_logo'):
+                if community.group_logo:
+                    community.group_logo.delete(save=False)
+                    community.group_logo = None
+            elif request.FILES.get('group_logo'):
+                if community.group_logo:
+                    community.group_logo.delete(save=False)
                 community.group_logo = request.FILES['group_logo']
+
+            # Banner handling
+            if request.POST.get('clear_banner'):
+                if community.banner:
+                    community.banner.delete(save=False)
+                    community.banner = None
+            elif request.FILES.get('banner'):
+                if community.banner:
+                    community.banner.delete(save=False)
+                community.banner = request.FILES['banner']
 
             community.save()
 
@@ -1345,3 +1442,697 @@ def community_edit(request, username):
         'blog/community_edit.html',
         context
     )
+
+
+# Email validation
+def check_student_email(request):
+    email = request.GET.get('email', '').strip().lower()
+
+    if not email:
+        return HttpResponse(
+            '<span style="color: #94a3b8; font-size: 13px;">Enter your GDG BCET email.</span>'
+        )
+
+    match = re.fullmatch(STUDENT_EMAIL_REGEX, email)
+    if not match:
+        return HttpResponse(
+            '<span style="color: #ef4444; font-size: 13px;">'
+            'Invalid format! Must follow bcet gmail format'
+            '</span>'
+        )
+
+    extracted_username = match.group(1)
+
+    if User.objects.filter(email__iexact=email).exists():
+        return HttpResponse(
+            '<span style="color: #ef4444; font-size: 13px;">'
+            'Email already registered. Please sign in.'
+            '</span>'
+        )
+
+    if User.objects.filter(username__iexact=extracted_username).exists():
+        return HttpResponse(
+            f'<span style="color: #ef4444; font-size: 13px;">'
+            f'Username <b>@{extracted_username}</b> is already registered.'
+            f'</span>'
+        )
+
+    return HttpResponse(
+        f'<span style="color: #22c55e; font-size: 13px;">'
+        f'Valid email! Default username: <b>@{extracted_username}</b>'
+        f'</span>'
+    )
+
+
+# Create portfolio
+def create_portfolio_account(request):
+    if request.user.is_authenticated:
+        return redirect('student_portfolio_profile', username=request.user.username)
+
+    step = request.session.get('otp_step', 'form')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        # Send OTP
+        if action == 'send_otp':
+            email = request.POST.get('email', '').strip().lower()
+            password1 = request.POST.get('password1', '').strip()
+            password2 = request.POST.get('password2', '').strip()
+
+            match = re.fullmatch(STUDENT_EMAIL_REGEX, email)
+            if not match:
+                messages.error(request, "Invalid email. Must match 'gdg bcet' pattern.")
+                return render(request, 'blog/student_create_portfolio.html', {'step': 'form', 'email': email})
+
+            username = match.group(1)
+            batch_year = match.group(2)
+
+            if User.objects.filter(email__iexact=email).exists():
+                messages.error(request, "This email is already registered.")
+                return render(request, 'blog/student_create_portfolio.html', {'step': 'form', 'email': email})
+
+            if User.objects.filter(username__iexact=username).exists():
+                messages.error(request, f"Username @{username} is already taken.")
+                return render(request, 'blog/student_create_portfolio.html', {'step': 'form', 'email': email})
+
+            if len(password1) < 6:
+                messages.error(request, "Password must be at least 6 characters.")
+                return render(request, 'blog/student_create_portfolio.html', {'step': 'form', 'email': email})
+
+            if password1 != password2:
+                messages.error(request, "Passwords do not match.")
+                return render(request, 'blog/student_create_portfolio.html', {'step': 'form', 'email': email})
+
+            otp = str(random.randint(100000, 999999))
+            request.session['portfolio_signup_data'] = {
+                'email': email,
+                'username': username,
+                'batch_year': batch_year,
+                'password': password1,
+                'otp': otp,
+            }
+            request.session['otp_step'] = 'verify'
+
+            success, err = send_signup_otp_email(email, username, otp)
+            if success:
+                messages.success(request, f"Verification OTP sent to {email}.")
+            else:
+                messages.error(request, f"Failed to send email: {err}")
+                request.session['otp_step'] = 'form'
+                return render(request, 'blog/student_create_portfolio.html', {'step': 'form', 'email': email})
+
+            return render(request, 'blog/student_create_portfolio.html', {
+                'step': 'verify',
+                'email': email,
+                'username': username
+            })
+
+        # Verify OTP
+        elif action == 'verify_otp':
+            entered_otp = request.POST.get('otp', '').strip()
+            signup_data = request.session.get('portfolio_signup_data')
+
+            if not signup_data:
+                messages.error(request, "Session expired. Please try again.")
+                request.session['otp_step'] = 'form'
+                return redirect('create_portfolio_account')
+
+            if entered_otp != signup_data.get('otp'):
+                messages.error(request, "Invalid OTP code.")
+                return render(request, 'blog/student_create_portfolio.html', {
+                    'step': 'verify',
+                    'email': signup_data.get('email'),
+                    'username': signup_data.get('username')
+                })
+
+            if User.objects.filter(email__iexact=signup_data['email']).exists():
+                messages.error(request, "This email is already registered.")
+                request.session.pop('portfolio_signup_data', None)
+                request.session['otp_step'] = 'form'
+                return redirect('student_login')
+
+            user = User.objects.create_user(
+                username=signup_data['username'],
+                email=signup_data['email'],
+                password=signup_data['password']
+            )
+            StudentPortfolio.objects.create(
+                user=user
+                # batch_year=signup_data['batch_year']
+            )
+
+            send_verification_success_email(user.email, user)
+            send_welcome_email(user.email, user)
+
+            request.session.pop('portfolio_signup_data', None)
+            request.session.pop('otp_step', None)
+
+            auth_login(request, user)
+            messages.success(request, f"Welcome @{user.username}! Your portfolio account is ready.")
+            return redirect('student_portfolio_profile', username=user.username)
+
+        # Reset email
+        elif action == 'reset':
+            request.session.pop('portfolio_signup_data', None)
+            request.session['otp_step'] = 'form'
+            return redirect('create_portfolio_account')
+
+    signup_data = request.session.get('portfolio_signup_data', {})
+    return render(request, 'blog/student_create_portfolio.html', {
+        'step': step,
+        'email': signup_data.get('email', ''),
+        'username': signup_data.get('username', '')
+    })
+
+
+# Student login
+def student_login(request):
+    if request.user.is_authenticated:
+        return redirect('student_portfolio_profile', username=request.user.username)
+
+    next_url = request.GET.get('next') or request.POST.get('next') or ''
+
+    if request.method == 'POST':
+        identifier = request.POST.get('identifier', '').strip().lower()
+        password = request.POST.get('password', '').strip()
+
+        user_obj = User.objects.filter(Q(email__iexact=identifier) | Q(username__iexact=identifier)).first()
+        uname = user_obj.username if user_obj else identifier
+
+        user = authenticate(request, username=uname, password=password)
+        if user is not None:
+            auth_login(request, user)
+            if user.email:
+                send_login_alert_email(user.email, user)
+
+            messages.success(request, f"Welcome back, @{user.username}!")
+            if next_url:
+                return redirect(next_url)
+            return redirect('student_portfolio_profile', username=user.username)
+        else:
+            messages.error(request, "Invalid username, email, or password.")
+
+    return render(request, 'blog/student_login.html', {'next': next_url})
+
+
+# Student logout
+def student_logout(request):
+    auth_logout(request)
+    messages.info(request, "Logged out successfully.")
+    return redirect('student_login')
+
+# Reset password
+def student_forgot_password(request):
+    if request.user.is_authenticated:
+        return redirect('student_portfolio_profile', username=request.user.username)
+
+    step = request.session.get('reset_step', 'form')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        # Send reset OTP
+        if action == 'send_otp':
+            email = request.POST.get('email', '').strip().lower()
+            user = User.objects.filter(email__iexact=email).first()
+
+            if not user:
+                messages.error(request, "No account found with this email.")
+                return render(request, 'blog/student_forgot_password.html', {'step': 'form', 'email': email})
+
+            otp = str(random.randint(100000, 999999))
+            request.session['reset_password_data'] = {
+                'email': email,
+                'username': user.username,
+                'otp': otp,
+            }
+            request.session['reset_step'] = 'verify'
+
+            success, err = send_password_reset_otp_email(email, user, otp)
+            if success:
+                messages.success(request, f"Password reset OTP sent to {email}.")
+            else:
+                messages.error(request, f"Failed to send email: {err}")
+                request.session['reset_step'] = 'form'
+                return render(request, 'blog/student_forgot_password.html', {'step': 'form', 'email': email})
+
+            return render(request, 'blog/student_forgot_password.html', {
+                'step': 'verify',
+                'email': email,
+                'username': user.username
+            })
+
+        # Verify and update
+        elif action == 'verify_reset':
+            entered_otp = request.POST.get('otp', '').strip()
+            new_password = request.POST.get('password1', '').strip()
+            confirm_password = request.POST.get('password2', '').strip()
+
+            reset_data = request.session.get('reset_password_data')
+            if not reset_data:
+                messages.error(request, "Session expired. Please try again.")
+                request.session['reset_step'] = 'form'
+                return redirect('student_forgot_password')
+
+            if entered_otp != reset_data.get('otp'):
+                messages.error(request, "Invalid OTP code.")
+                return render(request, 'blog/student_forgot_password.html', {
+                    'step': 'verify',
+                    'email': reset_data.get('email'),
+                    'username': reset_data.get('username')
+                })
+
+            if len(new_password) < 6:
+                messages.error(request, "Password must be at least 6 characters.")
+                return render(request, 'blog/student_forgot_password.html', {
+                    'step': 'verify',
+                    'email': reset_data.get('email'),
+                    'username': reset_data.get('username')
+                })
+
+            if new_password != confirm_password:
+                messages.error(request, "Passwords do not match.")
+                return render(request, 'blog/student_forgot_password.html', {
+                    'step': 'verify',
+                    'email': reset_data.get('email'),
+                    'username': reset_data.get('username')
+                })
+
+            user = User.objects.filter(email__iexact=reset_data['email']).first()
+            if user:
+                user.set_password(new_password)
+                user.save()
+                send_password_reset_success_email(user.email, user.username)
+
+                request.session.pop('reset_password_data', None)
+                request.session.pop('reset_step', None)
+
+                messages.success(request, "Password reset successfully! Please sign in.")
+                return redirect('student_login')
+            else:
+                messages.error(request, "User account not found.")
+                return redirect('student_login')
+
+        # Reset email
+        elif action == 'reset':
+            request.session.pop('reset_password_data', None)
+            request.session['reset_step'] = 'form'
+            return redirect('student_forgot_password')
+
+    reset_data = request.session.get('reset_password_data', {})
+    return render(request, 'blog/student_forgot_password.html', {
+        'step': step,
+        'email': reset_data.get('email', ''),
+        'username': reset_data.get('username', '')
+    })
+
+
+# Change password
+@login_required(login_url='student_login')
+def change_password(request):
+    if request.method == 'POST':
+        old_password = request.POST.get('old_password', '').strip()
+        new_password = request.POST.get('new_password', '').strip()
+        confirm_password = request.POST.get('confirm_password', '').strip()
+
+        if not request.user.check_password(old_password):
+            messages.error(request, "Current password is incorrect.")
+            return render(request, 'blog/change_password.html')
+
+        if len(new_password) < 6:
+            messages.error(request, "New password must be at least 6 characters.")
+            return render(request, 'blog/change_password.html')
+
+        if new_password != confirm_password:
+            messages.error(request, "New passwords do not match.")
+            return render(request, 'blog/change_password.html')
+
+        request.user.set_password(new_password)
+        request.user.save()
+        update_session_auth_hash(request, request.user)
+        if Community.objects.filter(user=request.user).exists():
+            return redirect('community_page', username=request.user.username)
+        return redirect('student_portfolio_profile', username=request.user.username)
+
+    # Render template
+    context = {
+        'is_club': Community.objects.filter(user=request.user).exists(),
+    }
+    return render(request, 'blog/change_password.html', context)
+
+
+# Check student email
+@login_required(login_url='student_login')
+def student_email_check(request):
+    new_email = request.GET.get('email', '').strip().lower()
+    current_email = (request.user.email or '').strip().lower()
+
+    if not new_email:
+        return JsonResponse({'status': 'empty', 'message': 'Please enter an email address.'})
+
+    if new_email == current_email:
+        return JsonResponse({'status': 'current', 'message': 'Current email address.'})
+
+    is_club = Community.objects.filter(user=request.user).exists()
+    if is_club:
+        if not re.fullmatch(CLUB_EMAIL_REGEX, new_email):
+            return JsonResponse({'status': 'invalid', 'message': 'Club email must be a valid @gmail.com address.'})
+    else:
+        if not re.fullmatch(STUDENT_EMAIL_REGEX, new_email):
+            return JsonResponse({'status': 'invalid', 'message': 'Must follow bcet gmail format.'})
+
+    if User.objects.filter(email__iexact=new_email).exclude(pk=request.user.pk).exists():
+        return JsonResponse({'status': 'taken', 'message': 'This email is already in use by another account.'})
+
+    return JsonResponse({'status': 'available', 'message': 'Email is available. Click Send OTP to verify.'})
+
+
+# Send email OTP
+@login_required(login_url='student_login')
+def student_email_send_otp(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+    new_email = request.POST.get('email', '').strip().lower()
+    current_email = (request.user.email or '').strip().lower()
+
+    if not new_email:
+        return JsonResponse({'success': False, 'message': 'Email address cannot be empty.'})
+
+    if new_email == current_email:
+        return JsonResponse({'success': False, 'message': 'This is already your current email.'})
+
+    is_club = Community.objects.filter(user=request.user).exists()
+    if is_club:
+        if not re.fullmatch(CLUB_EMAIL_REGEX, new_email):
+            return JsonResponse({'success': False, 'message': 'Club email must be a valid @gmail.com address.'})
+    else:
+        if not re.fullmatch(STUDENT_EMAIL_REGEX, new_email):
+            return JsonResponse({'success': False, 'message': 'Must follow bcet gmail format.'})
+
+    if User.objects.filter(email__iexact=new_email).exclude(pk=request.user.pk).exists():
+        return JsonResponse({'success': False, 'message': 'This email is already registered to another account.'})
+
+    otp = str(random.randint(100000, 999999))
+    request.session['email_change_data'] = {
+        'new_email': new_email,
+        'otp': otp,
+    }
+    if request.session.get('email_change_verified_email') != new_email:
+        request.session.pop('email_change_verified_email', None)
+    request.session.modified = True
+
+    success, err = send_email_change_otp(new_email, request.user.username, otp)
+    if not success:
+        return JsonResponse({'success': False, 'message': f'Failed to send OTP: {err}'})
+
+    return JsonResponse({'success': True, 'message': f'OTP sent successfully to {new_email}'})
+
+
+# Verify email OTP
+@login_required(login_url='student_login')
+def student_email_verify_otp(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+    entered_otp = request.POST.get('otp', '').strip()
+    new_email = request.POST.get('email', '').strip().lower()
+
+    change_data = request.session.get('email_change_data')
+    if not change_data:
+        return JsonResponse({'success': False, 'message': 'Session expired. Please click Send OTP again.'})
+
+    session_email = change_data.get('new_email', '').lower()
+    session_otp = change_data.get('otp', '')
+
+    if session_email != new_email:
+        return JsonResponse({'success': False, 'message': 'Email does not match requested OTP.'})
+
+    if entered_otp != session_otp:
+        return JsonResponse({'success': False, 'message': 'Invalid OTP code. Please enter the correct 6-digit code.'})
+
+    request.session['email_change_verified_email'] = new_email
+    request.session.modified = True
+
+    return JsonResponse({'success': True, 'message': 'Email verified successfully!'})
+
+# DOB-Countdown
+def birthday_countdown(request, dob, username):
+    try:
+        dob_date = date.fromisoformat(dob)
+    except ValueError:
+        return HttpResponse("Invalid date", status=400)
+
+    now = timezone.localtime()
+    today = now.date()
+
+    # Today Birthday
+    if today.month == dob_date.month and today.day == dob_date.day:
+        return render(request, "blog/includes/birthday_countdown.html", {
+            "is_birthday": True,
+            "username": username,
+        })
+
+    # Next birthday calculate
+    year = today.year + (
+        (today.month, today.day) > (dob_date.month, dob_date.day)
+    )
+
+    try:
+        birthday = date(year, dob_date.month, dob_date.day)
+    except ValueError:  # 29 February
+        birthday = date(year, 2, 28)
+
+    target = timezone.make_aware(
+        datetime.combine(birthday, time.min),
+        timezone.get_current_timezone(),
+    )
+
+    remaining = max(0, int((target - now).total_seconds()))
+
+    return render(request, "blog/includes/birthday_countdown.html", {
+        "is_birthday": False,
+        "username": username,
+        "days": remaining // 86400,
+        "hours": (remaining % 86400) // 3600,
+        "minutes": (remaining % 3600) // 60,
+        "seconds": remaining % 60,
+    })
+
+# Edit portfolio
+@login_required(login_url='student_login')
+def student_portfolio_edit(request, username):
+    if request.user.username.lower() != username.lower() and not request.user.is_superuser:
+        messages.error(request, "You can only edit your own portfolio.")
+        return redirect('student_portfolio_profile', username=username)
+
+    portfolio, _ = StudentPortfolio.objects.get_or_create(user=request.user)
+
+    if request.method == 'POST':
+        # Update username
+        new_username = request.POST.get('username', '').strip().lower()
+        if new_username and new_username != request.user.username:
+            if len(new_username) < 4 or not re.fullmatch(r"[a-z0-9_.]{4,20}", new_username):
+                messages.error(request, "Username must be 4-20 chars with lowercase letters, numbers, _, or .")
+                return redirect('student_portfolio_edit', username=request.user.username)
+
+            if new_username.startswith((".", "_")) or new_username.endswith((".", "_")) or ".." in new_username:
+                messages.error(request, "Username cannot start/end with dot or underscore or have double dots.")
+                return redirect('student_portfolio_edit', username=request.user.username)
+
+            if new_username in RESTRICTED_USERNAMES:
+                messages.error(request, "This username is reserved. Choose another.")
+                return redirect('student_portfolio_edit', username=request.user.username)
+
+            if User.objects.filter(username__iexact=new_username).exclude(pk=request.user.pk).exists():
+                messages.error(request, "Username is already taken. Choose another.")
+                return redirect('student_portfolio_edit', username=request.user.username)
+
+            request.user.username = new_username
+            request.user.save(update_fields=['username'])
+
+        # Update email
+        new_email = request.POST.get('email', '').strip().lower()
+        current_email = (request.user.email or '').strip().lower()
+        if new_email and new_email != current_email:
+            if not re.fullmatch(STUDENT_EMAIL_REGEX, new_email):
+                messages.error(request, "Invalid email. Must follow bcet gmail format.")
+                return redirect('student_portfolio_edit', username=request.user.username)
+
+            if User.objects.filter(email__iexact=new_email).exclude(pk=request.user.pk).exists():
+                messages.error(request, "This email is already in use by another account.")
+                return redirect('student_portfolio_edit', username=request.user.username)
+
+            entered_email_otp = request.POST.get('email_otp', '').strip()
+            verified_in_session = request.session.get('email_change_verified_email') == new_email
+            matches_session_otp = (
+                request.session.get('email_change_data', {}).get('new_email') == new_email and
+                request.session.get('email_change_data', {}).get('otp') == entered_email_otp
+            )
+
+            if verified_in_session or matches_session_otp:
+                request.user.email = new_email
+                request.user.save(update_fields=['email'])
+                request.session.pop('email_change_data', None)
+                request.session.pop('email_change_verified_email', None)
+                request.session.modified = True
+                send_email_changed_success(new_email, request.user.username)
+                messages.success(request, f"Email address updated to {new_email}!")
+            else:
+                messages.error(request, "Please verify your new email address with OTP before saving.")
+                return redirect('student_portfolio_edit', username=request.user.username)
+
+        # Visibility setting
+        vis = request.POST.get('visibility')
+        if vis:
+            if vis == 'block':
+                portfolio.is_block = True
+                portfolio.is_public = False
+            elif vis == 'private':
+                portfolio.is_block = False
+                portfolio.is_public = False
+            else:
+                portfolio.is_block = False
+                portfolio.is_public = True
+        else:
+            is_public_val = request.POST.get('is_public')
+            if is_public_val in ['block', 'blocked']:
+                portfolio.is_block = True
+                portfolio.is_public = False
+            elif is_public_val in ['0', 'false', 'False', 'private']:
+                portfolio.is_block = False
+                portfolio.is_public = False
+            else:
+                portfolio.is_block = False
+                portfolio.is_public = True
+
+        # Academic details
+        adm_year = request.POST.get('admission_year', '').strip()
+        portfolio.admission_year = int(adm_year) if adm_year.isdigit() else None
+
+        sem_val = request.POST.get('current_semester', '').strip()
+        if sem_val.isdigit() and 1 <= int(sem_val) <= 8:
+            portfolio.current_semester = int(sem_val)
+        else:
+            portfolio.current_semester = None
+
+        is_grad = request.POST.get('is_graduated')
+        portfolio.is_graduated = (is_grad in ['1', 'true', 'True', 'on']) or (sem_val == 'graduated')
+
+        dur_val = request.POST.get('degree_duration_years', '').strip()
+        portfolio.degree_duration_years = int(dur_val) if (dur_val.isdigit() and int(dur_val) > 0) else 4
+
+        # Graduation Year (Batch)
+        user_batch_val = request.POST.get('batch_year', '').strip()
+        if user_batch_val:
+            portfolio.batch_year = user_batch_val
+        elif portfolio.expected_completion_year:
+            portfolio.batch_year = str(portfolio.expected_completion_year)
+
+        # Details
+        portfolio.full_name = request.POST.get('full_name', '').strip()
+        portfolio.headline = request.POST.get('headline', '').strip()
+        portfolio.department = request.POST.get('department', '').strip()
+        portfolio.bio = request.POST.get('bio', '').strip()
+        portfolio.skills = request.POST.get('skills', '').strip()
+        portfolio.website = request.POST.get('website', '').strip()
+        portfolio.github = request.POST.get('github', '').strip()
+        portfolio.linkedin = request.POST.get('linkedin', '').strip()
+
+        # Gender
+        portfolio.gender = request.POST.get('gender', '').strip()
+
+        # DOB
+        dob = request.POST.get('dob', '').strip()
+        portfolio.dob = dob or None
+
+
+        # Verified socials
+        if portfolio.is_bluetick:
+            portfolio.instagram = request.POST.get('instagram', '').strip()
+            portfolio.facebook = request.POST.get('facebook', '').strip()
+            portfolio.twitter = request.POST.get('twitter', '').strip()
+
+        # Avatar handling
+        if request.POST.get('clear_profile_pic'):
+            if portfolio.profile_pic:
+                portfolio.profile_pic.delete(save=False)
+                portfolio.profile_pic = None
+        elif request.FILES.get('profile_pic'):
+            if portfolio.profile_pic:
+                portfolio.profile_pic.delete(save=False)
+            portfolio.profile_pic = request.FILES['profile_pic']
+
+        # Banner handling
+        if request.POST.get('clear_banner'):
+            if portfolio.banner:
+                portfolio.banner.delete(save=False)
+                portfolio.banner = None
+        elif request.FILES.get('banner'):
+            if portfolio.banner:
+                portfolio.banner.delete(save=False)
+            portfolio.banner = request.FILES['banner']
+
+        # Resume handling
+        if request.POST.get('clear_resume'):
+            if portfolio.resume:
+                portfolio.resume.delete(save=False)
+                portfolio.resume = None
+        elif request.FILES.get('resume'):
+            if portfolio.resume:
+                portfolio.resume.delete(save=False)
+            portfolio.resume = request.FILES['resume']
+
+        portfolio.save()
+        messages.success(request, "Portfolio updated successfully!")
+        return redirect('student_portfolio_profile', username=request.user.username)
+
+    return render(request, 'blog/student_edit_portfolio.html', {
+        'portfolio': portfolio,
+        'profile_user': request.user,
+        'gender_list': portfolio._meta.get_field('gender').choices,
+    })
+
+
+# Student profile
+def student_portfolio_profile(request, username):
+    user_obj = get_object_or_404(User, username__iexact=username)
+    portfolio, _ = StudentPortfolio.objects.get_or_create(user=user_obj)
+    is_owner = request.user.is_authenticated and request.user == user_obj
+
+    # Relationship badge
+    relationship_badge = None
+    if request.user.is_authenticated and not is_owner:
+        relationship_badge = portfolio.get_relationship_to(request.user)
+
+    # Blocked profile check
+    if portfolio.is_block and not is_owner:
+        return render(request, 'blog/student_portfolio_profile.html', {
+            'profile_user': user_obj,
+            'portfolio': portfolio,
+            'is_owner': False,
+            'is_private_locked': False,
+            'is_blocked_locked': True,
+            'relationship_badge': None,
+        })
+
+    # Privacy check
+    if not portfolio.is_public and not is_owner:
+        return render(request, 'blog/student_portfolio_profile.html', {
+            'profile_user': user_obj,
+            'portfolio': portfolio,
+            'is_owner': False,
+            'is_private_locked': True,
+            'is_blocked_locked': False,
+            'relationship_badge': None,
+        })
+
+    return render(request, 'blog/student_portfolio_profile.html', {
+        'profile_user': user_obj,
+        'portfolio': portfolio,
+        'is_owner': is_owner,
+        'is_private_locked': False,
+        'is_blocked_locked': False,
+        'relationship_badge': relationship_badge,
+    })

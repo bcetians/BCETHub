@@ -4,7 +4,7 @@ from .models import (
     MessTiming, DailyMessMenu, RoutineSlot, RoutineFile, Feedback, Section, 
     Course, CRProfile, Notes, NoteImage, Module, Subject, PYQ, 
     PYQImage, Assignment, Notice, Community, CommunityGroupType,
-    CommunityPost, CommunityPostImage, Holiday
+    CommunityPost, CommunityPostImage, Holiday, StudentPortfolio
 )
 
 
@@ -172,3 +172,11 @@ class HolidayAdmin(admin.ModelAdmin):
     list_display = ('title', 'dec', 'holiday_start', 'holiday_end', 'is_class', 'is_mess')
     list_filter = ('holiday_start', 'holiday_end', 'is_class', 'is_mess')
     search_fields = ('title', 'dec')
+
+# StudentPortfolio admin register
+@admin.register(StudentPortfolio)
+class StudentPortfolioAdmin(admin.ModelAdmin):
+    list_display = ('user', 'full_name', 'batch_year', 'department', 'is_public', 'is_block', 'is_bluetick', 'created_at')
+    list_filter = ('is_public', 'is_block', 'is_bluetick', 'batch_year', 'department', 'created_at')
+    search_fields = ('user__username', 'user__email', 'full_name', 'headline', 'skills', 'bio')
+    list_editable = ('is_public', 'is_block', 'is_bluetick')

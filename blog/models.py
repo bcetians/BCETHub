@@ -543,6 +543,12 @@ class Community(models.Model):
         blank=True,
         null=True
     )
+    
+    banner = models.ImageField(
+        upload_to='group-banner/',
+        blank=True,
+        null=True
+    )
 
     instagram = models.CharField(max_length=2000, blank=True, null=True)
     facebook = models.CharField(max_length=2000, blank=True, null=True)
@@ -754,3 +760,235 @@ class Holiday(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.holiday_start or 'No Date'}"
+
+GENDER_LIST = ["Male", "Female", "Other", "Prefer not to say"]
+
+# portfolio model
+class StudentPortfolio(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='student_portfolio'
+    )
+    full_name = models.CharField(max_length=150, blank=True, null=True, help_text="Full name of student")
+    gender = models.CharField(
+        max_length=20,
+        choices=[(g, g) for g in GENDER_LIST],
+        blank=True,
+    )
+    dob = models.DateField(blank=True, null=True)
+    headline = models.CharField(max_length=220, blank=True, null=True, help_text="Tagline e.g. Full Stack Developer | GDG Member")
+    batch_year = models.CharField(max_length=10, blank=True, null=True)
+    department = models.CharField(max_length=120, blank=True, null=True, help_text="Department / Branch e.g. Computer Science & Engineering")
+    bio = models.TextField(blank=True, null=True)
+    skills = models.TextField(blank=True, null=True, help_text="Comma-separated skills e.g. Python, Django, React, Git")
+
+    profile_pic = models.ImageField(
+        upload_to='portfolios/profiles/',
+        blank=True,
+        null=True
+    )
+    banner = models.ImageField(
+        upload_to='portfolios/banners/',
+        blank=True,
+        null=True
+    )
+
+    # Resume file
+    resume = models.FileField(
+        upload_to='portfolios/resumes/',
+        blank=True,
+        null=True
+    )
+
+    website = models.URLField(max_length=2000, blank=True, null=True)
+    github = models.URLField(max_length=2000, blank=True, null=True)
+    linkedin = models.URLField(max_length=2000, blank=True, null=True)
+
+    # Academic details
+    admission_year = models.PositiveIntegerField(blank=True, null=True)
+    current_semester = models.PositiveSmallIntegerField(blank=True, null=True)
+    is_graduated = models.BooleanField(default=False)
+    degree_duration_years = models.PositiveSmallIntegerField(default=4)
+
+    # Verification status
+    is_bluetick = models.BooleanField(default=False)
+    is_public = models.BooleanField(default=True)
+    is_block = models.BooleanField(default=False)
+
+    # Social links
+    instagram = models.CharField(max_length=2000, blank=True, null=True)
+    facebook = models.CharField(max_length=2000, blank=True, null=True)
+    twitter = models.CharField(max_length=2000, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def display_name(self):
+        if self.full_name and self.full_name.strip():
+            return self.full_name.strip()
+        full = self.user.get_full_name().strip() if self.user else ""
+        if full:
+            return full
+        return self.user.username if self.user else "Student"
+
+    @property
+    def skills_list(self):
+        if not self.skills:
+            return []
+        return [s.strip() for s in self.skills.split(',') if s.strip()]
+
+    @property
+    def is_academic_setup(self):
+        # Academic setup status
+        return bool(self.admission_year or self.current_semester or self.is_graduated)
+
+    @property
+    def is_profile_setup(self):
+        # Profile setup status
+        if self.is_academic_setup:
+            return True
+        if self.full_name and self.full_name.strip():
+            return True
+        if self.department and self.department.strip():
+            return True
+        if self.headline and self.headline.strip():
+            return True
+        if self.bio and self.bio.strip():
+            return True
+        return False
+
+    @property
+    def calculated_academic_year(self):
+        # Academic year calculation
+        import datetime
+        if not self.is_academic_setup:
+            return "New"
+        if self.is_graduated:
+            return "Passout"
+        if self.current_semester:
+            if self.current_semester in [1, 2]:
+                return "1st Year"
+            elif self.current_semester in [3, 4]:
+                return "2nd Year"
+            elif self.current_semester in [5, 6]:
+                return "3rd Year"
+            elif self.current_semester in [7, 8]:
+                return "4th Year"
+            elif self.current_semester > 8:
+                return "Passout"
+        if self.admission_year:
+            now_year = datetime.date.today().year
+            now_month = datetime.date.today().month
+            curr_academic = now_year if now_month >= 7 else (now_year - 1)
+            diff = curr_academic - self.admission_year + 1
+            if diff <= 1:
+                return "1st Year"
+            elif diff == 2:
+                return "2nd Year"
+            elif diff == 3:
+                return "3rd Year"
+            elif diff == 4:
+                return "4th Year"
+            else:
+                return "Passout"
+        return "New"
+
+    @property
+    def expected_completion_year(self):
+        # Expected graduation year
+        if self.admission_year:
+            dur = self.degree_duration_years or 4
+            return self.admission_year + dur
+        if self.is_academic_setup and self.batch_year:
+            try:
+                by = int(self.batch_year)
+                return by if by > 100 else (2000 + by)
+            except (ValueError, TypeError):
+                pass
+        return None
+
+    @property
+    def academic_year_rank(self):
+        # Academic rank calculation
+        yr = self.calculated_academic_year
+        if yr == "Passout":
+            return 5
+        elif yr == "4th Year":
+            return 4
+        elif yr == "3rd Year":
+            return 3
+        elif yr == "2nd Year":
+            return 2
+        elif yr == "1st Year":
+            return 1
+        return 0
+
+    def get_relationship_to(self, viewer_user):
+        # Relationship comparison
+        if not viewer_user or not viewer_user.is_authenticated:
+            return None
+        if viewer_user == self.user:
+            return None
+        viewer_portfolio = getattr(viewer_user, 'student_portfolio', None)
+        if not viewer_portfolio:
+            return None
+
+        # Requires academic setup
+        if not self.is_academic_setup or not viewer_portfolio.is_academic_setup:
+            return None
+
+        # Compare admission years
+        if self.admission_year and viewer_portfolio.admission_year:
+            if self.admission_year < viewer_portfolio.admission_year:
+                return {'type': 'senior', 'label': 'Senior'}
+            elif self.admission_year > viewer_portfolio.admission_year:
+                return {'type': 'junior', 'label': 'Junior'}
+            else:
+                return {'type': 'batchmate', 'label': 'Batchmate'}
+
+        # Compare academic rank
+        s_rank = self.academic_year_rank
+        v_rank = viewer_portfolio.academic_year_rank
+        if s_rank > 0 and v_rank > 0:
+            if s_rank > v_rank:
+                return {'type': 'senior', 'label': 'Senior'}
+            elif s_rank < v_rank:
+                return {'type': 'junior', 'label': 'Junior'}
+            else:
+                return {'type': 'batchmate', 'label': 'Batchmate'}
+
+        return None
+
+    @property
+    def instagram_url(self):
+        if not self.instagram:
+            return ''
+        val = self.instagram.strip()
+        if val.startswith('http://') or val.startswith('https://'):
+            return val
+        val = val.lstrip('@')
+        return f"https://instagram.com/{val}"
+
+    @property
+    def twitter_url(self):
+        if not self.twitter:
+            return ''
+        val = self.twitter.strip()
+        if val.startswith('http://') or val.startswith('https://'):
+            return val
+        val = val.lstrip('@')
+        return f"https://x.com/{val}"
+
+    @property
+    def facebook_url(self):
+        if not self.facebook:
+            return ''
+        val = self.facebook.strip()
+        if val.startswith('http://') or val.startswith('https://'):
+            return val
+        return f"https://facebook.com/{val}"
+
+    def __str__(self):
+        return f"@{self.user.username} - {self.display_name} ({self.calculated_academic_year or self.batch_year})"

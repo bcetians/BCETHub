@@ -40,18 +40,29 @@
                 </div>
             </div>
 
-            <button type="submit" class="bcet-btn-login google-glow-border">
+            <button type="submit" class="bcet-btn-login">
                 <i data-lucide="log-in"></i>
                 <span>Sign In to Dashboard</span>
             </button>
+
+            <a href="{% url 'create_portfolio_account' %}" class="bcet-btn-secondary">
+                <i data-lucide="user-plus"></i>
+                <span>Create Student Portfolio</span>
+            </a>
         </form>
 
         <div class="bcet-login-footer">
-            <p><i data-lucide="info"></i> Credentials are provided by the developer of the BCETHub.</p>
-            <a href="{% url 'community' %}" class="bcet-social-btn google-glow-border">
-                <i data-lucide="arrow-left"></i>
-                <span>Back to Communities</span>
-            </a>
+            <span><i data-lucide="info"></i> <p>Club credentials are provided by BCETHub developer <a href="https://instagram.com/rishabhsahill">@rishabhsahill</a>.</p></span>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%;">
+                <a href="{% url 'student_login' %}" class="bcet-social-btn">
+                    <i data-lucide="user"></i>
+                    <span>Student Login</span>
+                </a>
+                <a href="{% url 'community' %}" class="bcet-social-btn">
+                    <i data-lucide="arrow-left"></i>
+                    <span>Communities</span>
+                </a>
+            </div>
         </div>
     </div>
 </div>
@@ -214,8 +225,7 @@
         gap: 12px;
     }
 
-    .bcet-login-footer p {
-        font-size: 12px;
+    .bcet-login-footer span {
         color: var(--text-muted);
         margin: 0;
         display: inline-flex;
@@ -224,9 +234,67 @@
         gap: 5px;
     }
 
-    .bcet-login-footer p svg {
-        width: 13px;
-        height: 13px;
+    .bcet-login-footer span p {
+        font-size: 12px;
+    }
+
+    .bcet-login-footer span p a {
+        color: var(--text-primary); 
+        text-decoration: none;
+    }
+
+    .bcet-btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: transparent;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .bcet-btn-secondary:hover {
+        border-color: #0284c7;
+        color: var(--text-primary);
+        background: rgba(2, 132, 199, 0.08);
+    }
+
+    .bcet-btn-secondary svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .bcet-social-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 14px;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: all 0.15s ease;
+    }
+
+    .bcet-social-btn:hover {
+        border-color: #0284c7;
+        color: #ffffff;
+    }
+
+    .bcet-social-btn svg {
+        width: 14px;
+        height: 14px;
     }
 </style>
 {% endblock %}

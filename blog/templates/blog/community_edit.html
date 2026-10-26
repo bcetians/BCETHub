@@ -1,355 +1,697 @@
-
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Edit Profile - {{ community.group_name }}{% endblock %}
+{% block title %}Edit Club - {{ community.group_name }} | BCETHub{% endblock %}
 
 {% block content %}
-
-<style>
-    .community-edit-wrapper {
-        max-width: 760px;
-        margin: 30px auto;
-        /* padding: 0 16px 40px; */
-        color: var(--text-primary);
-    }
-
-    .bcet-post-top-nav {
-        margin-bottom: 18px;
-    }
-
-    .community-edit-card {
-        padding: 28px;
-        background: var(--card-bg);
-        border: 1px solid var(--border-color);
-        border-radius: 16px;
-    }
-
-    .edit-header {
-        margin-bottom: 24px;
-    }
-
-    .back-link {
-        color: var(--text-muted);
-        text-decoration: none;
-        font-size: 14px;
-    }
-
-    .edit-header h1 {
-        margin: 18px 0 8px;
-        font-size: 26px;
-    }
-
-    .edit-header p,
-    .form-group small {
-        color: var(--text-muted);
-    }
-
-    .community-edit-form h2 {
-        font-size: 18px;
-        margin: 28px 0 18px;
-        padding-top: 20px;
-        border-top: 1px solid var(--border-color);
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin-bottom: 20px;
-    }
-
-    .form-group label {
-        font-size: 14px;
-        font-weight: 600;
-    }
-
-    .form-group input,
-    .form-group textarea,
-    .form-group select {
-        width: 100%;
-        box-sizing: border-box;
-        padding: 12px;
-        color: var(--text-primary);
-        background: var(--card-bg);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        font: inherit;
-    }
-
-    .form-group input:focus,
-    .form-group textarea:focus,
-    .form-group select:focus {
-        outline: 2px solid #38bdf8;
-        outline-offset: 1px;
-    }
-
-    .form-group textarea {
-        resize: vertical;
-    }
-
-    .current-logo img {
-        width: 100px;
-        height: 100px;
-        object-fit: cover;
-        border-radius: 50%;
-        border: 1px solid var(--border-color);
-    }
-
-    .edit-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-top: 28px;
-    }
-
-    .save-btn,
-    .cancel-btn {
-        background-color: var(--card-bg);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 11px 18px;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 14px;
-        cursor: pointer;
-        text-decoration: none;
-    }
-
-    .save-btn {
-        color: var(--text-primary);
-        border: 1px solid var(--border-color);
-    }
-
-    
-    .cancel-btn {
-        color: var(--text-primary);
-        background: var(--card-bg);
-        border: 1px solid var(--border-color);
-    }
-    
-    .save-btn:hover, .cancel-btn:hover {
-        border-color: var(--text-primary);
-    }
-
-    .edit-message {
-        padding: 12px;
-        margin-bottom: 16px;
-        border-radius: 8px;
-        font-size: 14px;
-    }
-
-    .edit-message.success {
-        background: rgba(34, 197, 94, 0.12);
-        color: #22c55e;
-    }
-
-    .edit-message.error {
-        background: rgba(239, 68, 68, 0.12);
-        color: #ef4444;
-    }
-
-    @media (max-width: 600px) {
-        .community-edit-card {
-            padding: 18px;
-        }
-
-        .edit-header h1 {
-            font-size: 22px;
-        }
-
-        .edit-actions > * {
-            flex: 1;
-        }
-    }
-
-    #username-result{
-        margin: 5px;
-    }
-</style>
-
-
-<div class="community-edit-wrapper">
-    
-    <div class="community-edit-card">
-
-        <div class="bcet-post-top-nav">
-            <a href="{% url 'community_page' username=community.username %}" class="bcet-chip">
-                <i data-lucide="arrow-left"></i>
-                <span>Back to {{ community.group_name }}</span>
-            </a>
-        </div>
-
-        <div class="edit-header">
-            <h1>Edit {% if community.group_type.name != 'Social' %}Club{% else %}Your {% endif %} Profile</h1>
-            <p>Update your {% if community.group_type.name != 'Social' %}Club{% else %}Proflie{% endif %} information and social links.</p>
+<div class="bcet-portfolio-container">
+    <div class="bcet-portfolio-card">
+        <!-- Header -->
+        <div class="bcet-edit-header">
+            <div>
+                <a href="{% url 'community_page' username=community.username %}" class="bcet-back-link">
+                    <i data-lucide="arrow-left"></i>
+                    <span>Back to {{ community.group_name }}</span>
+                </a>
+                <h1 class="bcet-edit-title">Edit Club Profile</h1>
+                <p class="bcet-edit-subtitle">Update club details, banner, category, and social links.</p>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <a href="{% url 'change_password' %}" class="bcet-btn-outline" style="padding: 6px 12px; font-size: 12.5px;">
+                    <i data-lucide="key"></i>
+                    <span>Change Password</span>
+                </a>
+            </div>
         </div>
 
         {% if messages %}
             {% for message in messages %}
-                <div class="edit-message {{ message.tags }}">
+                <div class="bcet-alert-box {{ message.tags }}">
                     {{ message }}
                 </div>
             {% endfor %}
         {% endif %}
 
-        <form method="POST"
-              enctype="multipart/form-data"
-              class="community-edit-form">
-
+        <form method="POST" enctype="multipart/form-data" class="bcet-edit-form">
             {% csrf_token %}
 
-            <!-- Current logo -->
-            <div class="form-group">
-                <label>Club Logo</label>
+            <!-- Club images -->
+            <div class="bcet-form-section">
+                <h3 class="bcet-section-heading">
+                    <i data-lucide="image"></i>
+                    <span>Club Images</span>
+                </h3>
 
-                {% if community.group_logo %}
-                    <div class="current-logo">
-                        <img src="{{ community.group_logo.url }}"
-                             alt="{{ community.group_name }}">
+                <div class="bcet-images-upload-grid">
+                    <!-- Logo upload -->
+                    <div class="bcet-img-upload-box">
+                        <label class="bcet-upload-label">Club Logo</label>
+                        <div class="bcet-avatar-preview-wrap">
+                            {% if community.group_logo %}
+                                <img src="{{ community.group_logo.url }}" id="logo-preview" alt="Club Logo" class="bcet-avatar-preview-img">
+                            {% else %}
+                                <img src="{% static 'img/defult.jpeg' %}" id="logo-preview" alt="Club Logo" class="bcet-avatar-preview-img">
+                                <!-- <div id="logo-placeholder" class="bcet-avatar-preview-placeholder">
+                                    {{ community.group_name|slice:":2"|upper }}
+                                </div>
+                                <img id="logo-preview" alt="Club Logo" class="bcet-avatar-preview-img" style="display: none;"> -->
+                            {% endif %}
+                        </div>
+                        {% if community.group_logo %}
+                            <label class="bcet-clear-checkbox">
+                                <input type="checkbox" name="clear_group_logo" value="1">
+                                <span>Remove logo</span>
+                            </label>
+                        {% endif %}
+                        <input type="file" id="group_logo" name="group_logo" accept=".jpg,.jpeg,.png,.webp,.gif" class="bcet-file-input" onchange="previewImage(this, 'logo-preview', 'logo-placeholder')">
+                        <span class="bcet-input-hint">PNG, JPG, WebP, or animated GIF (Max 5MB)</span>
                     </div>
-                {% endif %}
 
-                <input type="file"
-                       name="group_logo"
-                       accept="image/*">
-
-                <small>Choose a new image to replace the current logo.</small>
+                    <!-- Cover banner -->
+                    <div class="bcet-img-upload-box" style="flex: 2;">
+                        <label class="bcet-upload-label">Cover Banner</label>
+                        <div class="bcet-banner-preview-wrap">
+                            {% if community.banner %}
+                                <img src="{{ community.banner.url }}" id="banner-preview" alt="Banner Preview" class="bcet-banner-preview-img">
+                            {% elif community.group_logo %}
+                                <img src="{{ community.group_logo.url }}" id="banner-preview" alt="Banner Preview" class="bcet-banner-preview-img profile-banner">
+                            {% else %}
+                                <div id="banner-placeholder" class="bcet-banner-preview-placeholder">
+                                    <i data-lucide="image"></i>
+                                    <span>Default gradient active</span>
+                                </div>
+                                <img id="banner-preview" alt="Banner Preview" class="bcet-banner-preview-img" style="display: none;">
+                            {% endif %}
+                        </div>
+                        {% if community.banner %}
+                            <label class="bcet-clear-checkbox">
+                                <input type="checkbox" name="clear_banner" value="1">
+                                <span>Remove banner</span>
+                            </label>
+                        {% endif %}
+                        <input type="file" id="banner" name="banner" accept="image/png,image/jpeg,image/webp,image/gif,image/*" class="bcet-file-input" onchange="previewImage(this, 'banner-preview', 'banner-placeholder')">
+                        <span class="bcet-input-hint">Aspect ratio 16:5. PNG, JPG, WebP, or animated GIF (Max 5MB)</span>
+                    </div>
+                </div>
             </div>
 
-            <!-- Club and User Name -->
-            <div class="form-group">
-                <label for="user_name">Username *</label>
-                <input
-                    type="text"
-                    id="user_name"
-                    name="user_name"
-                    value="{{ community.user.username }}"
-                    maxlength="20"
-                    pattern="[a-z0-9_.]+"
-                    hx-get="{% url 'check_username' %}"
-                    hx-trigger="input changed delay:400ms"
-                    hx-target="#username-result"
-                    hx-swap="innerHTML"
-                    hx-vals='{"current_username": "{{ community.user.username|escapejs }}"}'
-                    required
-                >
-                <div id="username-result"></div>
+            <!-- Identity settings -->
+            <div class="bcet-form-section">
+                <h3 class="bcet-section-heading">
+                    <i data-lucide="settings"></i>
+                    <span>Club Identity</span>
+                </h3>
 
-                <label for="group_name">{% if community.group_type.name != 'Social' %}Club Name{% else %}Name{% endif %} *</label>
-                <input type="text"
-                       id="group_name"
-                       name="group_name"
-                       value="{{ community.group_name }}"
-                       maxlength="2000"
-                       required>
+                <div class="bcet-grid-2">
+                    <!-- Username field -->
+                    <div class="bcet-form-field">
+                        <label for="user_name">
+                            <i data-lucide="at-sign"></i> Club Handle
+                        </label>
+                        <div class="bcet-input-wrap">
+                            <span class="bcet-input-prefix">@</span>
+                            <input 
+                                type="text" 
+                                id="user_name" 
+                                name="user_name" 
+                                value="{{ community.user.username }}" 
+                                required 
+                                maxlength="20"
+                                class="bcet-input"
+                                hx-get="{% url 'check_username' %}"
+                                hx-trigger="keyup changed delay:300ms"
+                                hx-target="#username-live-status"
+                                hx-vals='{"current_username": "{{ community.user.username|escapejs }}"}'
+                            >
+                        </div>
+                        <div id="username-live-status" class="bcet-live-status"></div>
+                        <span class="bcet-input-hint">4-20 chars: lowercase letters, numbers, _ and . only.</span>
+                    </div>
+
+                    <!-- Club email -->
+                    <div class="bcet-form-field">
+                        <label for="email">
+                            <i data-lucide="mail"></i> Club Email
+                        </label>
+                        <div class="bcet-input-wrap">
+                            <input 
+                                type="email" 
+                                id="email" 
+                                name="email" 
+                                value="{{ community.user.email }}" 
+                                class="bcet-input"
+                                placeholder="clubname@gmail.com"
+                            >
+                        </div>
+                        <span class="bcet-input-hint">Official club email (must end in @gmail.com).</span>
+                    </div>
+                </div>
+
+                <div class="bcet-grid-2" style="margin-top: 14px;">
+                    <!-- Club name -->
+                    <div class="bcet-form-field">
+                        <label for="group_name">
+                            <i data-lucide="users"></i> Club Name
+                        </label>
+                        <div class="bcet-input-wrap">
+                            <input 
+                                type="text" 
+                                id="group_name" 
+                                name="group_name" 
+                                value="{{ community.group_name }}" 
+                                required 
+                                maxlength="2000"
+                                class="bcet-input"
+                                placeholder="Club full name"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Category select -->
+                    <div class="bcet-form-field">
+                        <label for="group_type">
+                            <i data-lucide="tag"></i> Category
+                        </label>
+                        <div class="bcet-input-wrap">
+                            <select name="group_type" id="group_type" class="bcet-select">
+                                {% for type in group_types %}
+                                    <option value="{{ type.pk }}" {% if community.group_type_id == type.pk %}selected{% endif %}>
+                                        {{ type.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
-
-            <!-- Group type
-            <div class="form-group">
-                <label for="group_type">Club Category</label>
-
-                <select name="group_type" id="group_type">
-                    <option value="">Other</option>
-
-                    {% for type in group_types %}
-                        <option value="{{ type.pk }}"
-                            {% if community.group_type_id == type.pk %}
-                                selected
-                            {% endif %}>
-                            {{ type.name }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div> -->
 
             <!-- Description -->
-            <div class="form-group">
-                <label for="group_dec">{% if community.group_type.name != 'Social' %}Club Description{% else %}Bio{% endif %}</label>
-                <textarea id="group_dec"
-                          name="group_dec"
-                          rows="5"
-                          maxlength="5000">{{ community.group_dec }}</textarea>
+            <div class="bcet-form-section">
+                <h3 class="bcet-section-heading">
+                    <i data-lucide="file-text"></i>
+                    <span>About Club</span>
+                </h3>
+
+                <div class="bcet-form-field">
+                    <label for="group_dec">Club Description</label>
+                    <div class="bcet-textarea-wrap">
+                        <textarea id="group_dec" name="group_dec" rows="4" placeholder="Write about club mission, activities, and events..." class="bcet-textarea">{{ community.group_dec|default:'' }}</textarea>
+                    </div>
+                </div>
             </div>
 
-            <h2>Social Links</h2>
-                
-            {% if community.group_type.name != 'Social' %}
+            <!-- Social links -->
+            <div class="bcet-form-section">
+                <h3 class="bcet-section-heading">
+                    <i data-lucide="link"></i>
+                    <span>Connect & Links</span>
+                </h3>
 
-                <div class="form-group">
-                    <label for="instagram">Instagram URL</label>
-                    <input type="url" id="instagram"
-                        name="instagram"
-                        value="{{ community.instagram|default:'' }}"
-                        placeholder="https://instagram.com/yourclub">
+                <div class="bcet-grid-2">
+                    <div class="bcet-form-field">
+                        <label for="instagram"><i data-lucide="instagram"></i> Instagram URL</label>
+                        <div class="bcet-input-wrap">
+                            <input type="url" id="instagram" name="instagram" value="{{ community.instagram|default:'' }}" placeholder="https://instagram.com/club" class="bcet-input">
+                        </div>
+                    </div>
+
+                    <div class="bcet-form-field">
+                        <label for="facebook"><i data-lucide="facebook"></i> Facebook URL</label>
+                        <div class="bcet-input-wrap">
+                            <input type="url" id="facebook" name="facebook" value="{{ community.facebook|default:'' }}" placeholder="https://facebook.com/club" class="bcet-input">
+                        </div>
+                    </div>
+
+                    <div class="bcet-form-field">
+                        <label for="linkedin"><i data-lucide="briefcase"></i> LinkedIn URL</label>
+                        <div class="bcet-input-wrap">
+                            <input type="url" id="linkedin" name="linkedin" value="{{ community.linkedin|default:'' }}" placeholder="https://linkedin.com/company/club" class="bcet-input">
+                        </div>
+                    </div>
+
+                    <div class="bcet-form-field">
+                        <label for="discord"><i data-lucide="message-square"></i> Discord Invite URL</label>
+                        <div class="bcet-input-wrap">
+                            <input type="url" id="discord" name="discord" value="{{ community.discord|default:'' }}" placeholder="https://discord.gg/..." class="bcet-input">
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="facebook">Facebook URL</label>
-                    <input type="url" id="facebook"
-                        name="facebook"
-                        value="{{ community.facebook|default:'' }}"
-                        placeholder="https://facebook.com/yourclub">
+                <div class="bcet-grid-2">
+                    <div class="bcet-form-field">
+                        <label for="other_title"><i data-lucide="type"></i> Custom Link Title</label>
+                        <div class="bcet-input-wrap">
+                            <input type="text" id="other_title" name="other_title" value="{{ community.other_title|default:'' }}" placeholder="e.g. Website or Registration" class="bcet-input">
+                        </div>
+                    </div>
+
+                    <div class="bcet-form-field">
+                        <label for="other"><i data-lucide="globe"></i> Custom URL</label>
+                        <div class="bcet-input-wrap">
+                            <input type="url" id="other" name="other" value="{{ community.other|default:'' }}" placeholder="https://example.com" class="bcet-input">
+                        </div>
+                    </div>
                 </div>
 
-            {% endif %}
-
-            <div class="form-group">
-                <label for="linkedin">LinkedIn URL</label>
-                <input type="url" id="linkedin"
-                       name="linkedin"
-                       value="{{ community.linkedin|default:'' }}"
-                       placeholder="https://linkedin.com/company/username">
-            </div>
-
-            <div class="form-group">
-                <label for="discord">Discord Invite URL</label>
-                <input type="url" id="discord"
-                       name="discord"
-                       value="{{ community.discord|default:'' }}"
-                       placeholder="https://discord.gg/...">
-            </div>
-
-            <div class="form-group">
-                <label for="other_title">Other Link Title</label>
-                <input type="text" id="other_title"
-                       name="other_title"
-                       value="{{ community.other_title|default:'' }}"
-                       placeholder="Website">
-            </div>
-
-            <div class="form-group">
-                <label for="other">Website / Other URL</label>
-                <input type="url" id="other"
-                       name="other"
-                       value="{{ community.other|default:'' }}"
-                       placeholder="https://example.com">
-            </div>
-            {% if community.group_type.name != 'Social' %}
-                <div class="form-group">
-                    <label for="join">Join Club URL</label>
-                    <input type="url" id="join"
-                    name="join"
-                    value="{{ community.join|default:'' }}"
-                    placeholder="https://example.com/join">
+                <div class="bcet-form-field">
+                    <label for="join"><i data-lucide="user-plus"></i> Join Club URL</label>
+                    <div class="bcet-input-wrap">
+                        <input type="url" id="join" name="join" value="{{ community.join|default:'' }}" placeholder="https://forms.gle/... or https://example.com/join" class="bcet-input">
+                    </div>
                 </div>
-            {% else %}
-            {% endif %} 
+            </div>
 
-            <div class="edit-actions">
-                <button type="submit" class="save-btn">
-                    Save Changes
+            <!-- Form actions -->
+            <div class="bcet-form-actions">
+                <button type="submit" class="bcet-btn-primary">
+                    <i data-lucide="check"></i>
+                    <span>Save Changes</span>
                 </button>
-
-                <a href="{% url 'community_page' username=community.username %}"
-                   class="cancel-btn">
-                    Cancel
+                <a href="{% url 'community_page' username=community.username %}" class="bcet-btn-outline">
+                    <span>Cancel</span>
                 </a>
             </div>
-
         </form>
     </div>
 </div>
 
+<script>
+function previewImage(input, previewId, placeholderId) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById(previewId);
+            const placeholder = document.getElementById(placeholderId);
+            if (preview) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                preview.classList.remove('profile-banner');
+            }
+            if (placeholder) {
+                placeholder.style.display = 'none';
+            }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+</script>
+
+<style>
+    .bcet-portfolio-container {
+        width: 100%;
+        max-width: 860px;
+        margin: 24px auto 50px;
+        box-sizing: border-box;
+    }
+
+    .bcet-portfolio-card {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .bcet-edit-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 28px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--border-color);
+        flex-wrap: wrap;
+    }
+
+    .bcet-back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        transition: color 0.15s ease;
+    }
+
+    .bcet-back-link:hover {
+        color: #0284c7;
+    }
+
+    .bcet-back-link svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .bcet-edit-title {
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0 0 6px 0;
+    }
+
+    .bcet-edit-subtitle {
+        font-size: 13.5px;
+        color: var(--text-muted);
+        margin: 0;
+    }
+
+    .bcet-alert-box {
+        padding: 12px 14px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 13.5px;
+    }
+
+    .bcet-alert-box.success {
+        background: rgba(34, 197, 94, 0.12);
+        color: #22c55e;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .bcet-alert-box.error {
+        background: rgba(239, 68, 68, 0.12);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .bcet-edit-form {
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+    }
+
+    .bcet-form-section {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 18px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+    }
+
+    .bcet-section-heading {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 4px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .bcet-section-heading svg {
+        width: 16px;
+        height: 16px;
+        color: #0284c7;
+    }
+
+    /* Images */
+    .bcet-images-upload-grid {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+
+    .bcet-img-upload-box {
+        flex: 1;
+        min-width: 220px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .bcet-upload-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .bcet-avatar-preview-wrap {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        border: 2px solid var(--border-color);
+        overflow: hidden;
+        background: var(--card-bg);
+    }
+
+    .bcet-avatar-preview-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .bcet-avatar-preview-placeholder {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%);
+        color: #ffffff;
+        font-size: 26px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .bcet-banner-preview-wrap {
+        width: 100%;
+        height: 90px;
+        border-radius: 10px;
+        border: 2px solid var(--border-color);
+        overflow: hidden;
+        background: #0f172a;
+    }
+
+    .bcet-banner-preview-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .profile-banner {
+        object-position: center;
+        filter: blur(3px);
+        transform: scale(1.05);
+    }
+
+    .bcet-banner-preview-placeholder {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #091322 0%, #172554 100%);
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 12.5px;
+    }
+
+    .bcet-banner-preview-placeholder svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .bcet-file-input {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    .bcet-clear-checkbox {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #ef4444;
+        cursor: pointer;
+        user-select: none;
+        margin-top: 4px;
+        font-weight: 500;
+    }
+
+    .bcet-clear-checkbox input[type="checkbox"] {
+        accent-color: #ef4444;
+        cursor: pointer;
+    }
+
+    .bcet-input-hint {
+        font-size: 11.5px;
+        color: var(--text-muted);
+    }
+
+    .bcet-live-status {
+        min-height: 18px;
+        font-size: 12.5px;
+    }
+
+    /* Grid & Fields */
+    .bcet-grid-2 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+    }
+
+    .bcet-form-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .bcet-form-field label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .bcet-form-field label svg {
+        width: 14px;
+        height: 14px;
+        color: var(--text-muted);
+    }
+
+    .bcet-input-wrap {
+        display: flex;
+        align-items: center;
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+        transition: border-color 0.15s ease;
+    }
+
+    .bcet-input-prefix {
+        padding: 0 10px 0 12px;
+        color: var(--text-muted);
+        font-weight: 700;
+        font-size: 14px;
+    }
+
+    .bcet-input-wrap:focus-within {
+        border-color: #0284c7;
+    }
+
+    .bcet-input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        padding: 10px 12px;
+        color: var(--text-primary);
+        font-size: 14px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .bcet-select {
+        flex: 1;
+        background: var(--card-bg);
+        border: none;
+        outline: none;
+        padding: 10px 12px;
+        color: var(--text-primary);
+        font-size: 14px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .bcet-textarea-wrap {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+        transition: border-color 0.15s ease;
+    }
+
+    .bcet-textarea-wrap:focus-within {
+        border-color: #0284c7;
+    }
+
+    .bcet-textarea {
+        width: 100%;
+        background: transparent;
+        border: none;
+        outline: none;
+        padding: 12px;
+        color: var(--text-primary);
+        font-size: 14px;
+        line-height: 1.5;
+        resize: vertical;
+        box-sizing: border-box;
+        font-family: inherit;
+    }
+
+    /* Actions */
+    .bcet-form-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+
+    .bcet-btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 24px;
+        background-color: #0284c7;
+        color: #ffffff;
+        border: 1px solid #0284c7;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .bcet-btn-primary:hover {
+        background-color: #0369a1;
+        border-color: #0369a1;
+    }
+
+    .bcet-btn-primary svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .bcet-btn-outline {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 20px;
+        background: transparent;
+        color: var(--text-muted);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .bcet-btn-outline:hover {
+        border-color: var(--text-muted);
+        color: var(--text-primary);
+    }
+
+    @media (max-width: 600px) {
+        .bcet-portfolio-card {
+            padding: 20px 14px;
+        }
+    }
+</style>
 {% endblock %}

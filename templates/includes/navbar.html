@@ -1,3 +1,5 @@
+{% load static %}
+
 <nav class="navbar">
     <div class="nav-container">
         <div class="left">
@@ -13,7 +15,7 @@
                        name="q" 
                        id="search-input"
                        value="{{ query|default:'' }}" 
-                       placeholder="Search courses, notes, sir name, day..." 
+                       placeholder="Search everything... clubs, students, notes, routine" 
                        aria-label="Search"
                        hx-get="{% url 'live_search' %}"
                        hx-trigger="input changed delay:150ms, keyup changed delay:150ms"
@@ -24,7 +26,7 @@
             <div id="live-search-popup" class="live-search-popup"></div>
         </div>
 
-        <div class="right nav-links">
+        <div class="nav-links">
             <a href="{% url 'home' %}" class="nav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}" title="Home">
                 <i data-lucide="home"></i>
                 <span>Home</span>
@@ -53,12 +55,44 @@
                 <i data-lucide="user-group"></i>
                 <span>Community</span>
             </a>
+
             
-            <!-- <button id="theme-toggle" class="nav-item theme-btn" aria-label="Toggle Theme">
-                <i data-lucide="moon" class="theme-icon"></i>
-                <span>Theme</span>
-            </button> -->
-            
+        {% if request.user.is_authenticated %}
+            <a href="{% url 'student_portfolio_profile' username=request.user.username %}"
+                class="nav-item {% if request.resolver_match.url_name == 'student_portfolio_profile' %}active{% endif %}"
+                title="Profile">
+
+                {% if request.user.student_portfolio.profile_pic %}
+                    <img
+                        src="{{ request.user.student_portfolio.profile_pic.url }}"
+                        alt="{{ request.user.username }}"
+                        class="nav-profile-pic {% if request.resolver_match.url_name == 'student_portfolio_profile' %}active{% endif %}"
+                    >
+                {% elif request.user.community_profile.group_logo %}
+                    <img
+                        src="{{ request.user.community_profile.group_logo.url }}"
+                        alt="{{ request.user.username }}"
+                        class="nav-profile-pic {% if request.resolver_match.url_name == 'student_portfolio_profile' %}active{% endif %}"
+                    >
+                {% else %}
+                    <img
+                        src="{% static 'img/defult.jpeg' %}"
+                        alt="{{ request.user.username }}"
+                        class="nav-profile-pic {% if request.resolver_match.url_name == 'student_portfolio_profile' %}active{% endif %}"
+                    >
+                {% endif %}
+                <span>@{{ request.user.username }}</span>
+            </a>
+        {% else %}
+            <a href="{% url 'student_login' %}"
+                class="nav-item {% if request.resolver_match.url_name == 'student_login' or request.resolver_match.url_name == 'create_portfolio_account' %}active{% endif %}"
+                title="Student Portfolio" title="Login">
+
+                <i data-lucide="log-in"></i>
+                <span>Login</span>
+            </a>
+        {% endif %}
+
         </div>
     </div>
 </nav>

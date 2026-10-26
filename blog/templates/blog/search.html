@@ -4,6 +4,181 @@
 {% block title %}Search Results for "{{ query }}" - BCET{% endblock %}
 
 {% block content %}
+<style>
+    .bcet-club-card {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        box-sizing: border-box;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .bcet-club-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+        border-color: #0284c7;
+    }
+    .bcet-mini-banner {
+        width: 100%;
+        height: 75px;
+        background: linear-gradient(135deg, #091322 0%, #172554 60%, #0369a1 100%);
+        position: relative;
+        overflow: hidden;
+    }
+    .bcet-mini-banner-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+    .bcet-mini-banner-pattern {
+        position: absolute;
+        inset: 0;
+        opacity: 0.2;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px);
+        background-size: 12px 12px;
+    }
+    .bcet-card-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        padding: 0 16px;
+        margin-top: -30px;
+        position: relative;
+        z-index: 2;
+    }
+    .bcet-club-avatar {
+        width: 58px !important;
+        height: 58px !important;
+        min-width: 58px !important;
+        max-width: 58px !important;
+        max-height: 58px !important;
+        border-radius: 50% !important;
+        background: var(--card-bg);
+        border: 3px solid var(--card-bg);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+        overflow: hidden !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+    .bcet-club-avatar img {
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
+        object-fit: cover !important;
+        display: block !important;
+        border-radius: 50% !important;
+    }
+    .bcet-club-avatar span {
+        background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%);
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .bcet-card-info-wrap {
+        padding: 10px 16px 0 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+    .bcet-club-name {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+        line-height: 1.35;
+    }
+    .bcet-club-link {
+        color: inherit;
+        text-decoration: none;
+    }
+    .bcet-club-link:hover {
+        color: #0284c7;
+    }
+    .bcet-club-username {
+        font-size: 12px;
+        color: var(--text-muted);
+        display: inline-flex;
+        align-items: center;
+    }
+    .bcet-card-body {
+        padding: 10px 16px;
+        flex: 1;
+    }
+    .bcet-club-desc {
+        font-size: 13px;
+        color: var(--text-muted);
+        line-height: 1.5;
+        margin: 0;
+    }
+    .bcet-card-foot {
+        padding: 12px 16px;
+        border-top: 1px solid var(--border-color);
+        background: rgba(0, 0, 0, 0.02);
+    }
+    .bcet-social-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .bcet-social-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        background: var(--input-bg);
+        color: var(--text-muted);
+        border: 1px solid var(--border-color);
+        transition: all 0.15s ease;
+        cursor: pointer;
+    }
+    .bcet-social-btn:hover {
+        color: #0284c7;
+        border-color: #0284c7;
+        background: rgba(2, 132, 199, 0.08);
+    }
+    .bcet-pill-batch,
+    .bcet-tag-category {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: rgba(2, 132, 199, 0.1);
+        color: #0284c7;
+        border: 1px solid rgba(2, 132, 199, 0.25);
+    }
+    .bcet-pill-dept-card {
+        display: inline-flex;
+        align-items: center;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: rgba(148, 163, 184, 0.1);
+        color: var(--text-muted);
+        border: 1px solid var(--border-color);
+    }
+</style>
 <div class="page-wrapper">
     <!-- Search Header Card -->
     <div class="page-header-card">
@@ -200,7 +375,7 @@
         <!-- Community Results -->
         {% if community_results %}
             <section class="search-section">
-                <h3 class="section-title"><i data-lucide="user-group"></i> Campus Communities & Clubs ({{ community_results|length }})</h3>
+                <h3 class="section-title"><i data-lucide="users"></i> Campus Communities &amp; Clubs ({{ community_results|length }})</h3>
                 <div class="card-grid">
                     {% for com in community_results %}
                         {% include 'blog/includes/c_club.html' with com=com %}
@@ -209,7 +384,111 @@
             </section>
         {% endif %}
 
-        {% if not post_results and not faculty_results and not induction_results and not routine_results and not mess_results and not branch_results and not notes_results and not assignments_results and not pyqs_results and not community_results %}
+        <!-- Student Portfolios -->
+        {% if portfolio_results %}
+            <section class="search-section">
+                <h3 class="section-title"><i data-lucide="sparkles"></i> Student Portfolios ({{ portfolio_results|length }})</h3>
+                <div class="card-grid">
+                    {% for port in portfolio_results %}
+                        <div class="bcet-club-card bcet-student-card">
+                            <!-- Mini banner -->
+                            <div class="bcet-mini-banner">
+                                {% if port.banner %}
+                                    <img src="{{ port.banner.url }}" alt="{{ port.display_name }} Banner" class="bcet-mini-banner-img">
+                                {% else %}
+                                    <div class="bcet-mini-banner-pattern"></div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Avatar and action -->
+                            <div class="bcet-card-head">
+                                <a href="{% url 'student_portfolio_profile' username=port.user.username %}" class="bcet-club-link">
+                                    <div class="bcet-club-avatar">
+                                        {% if port.profile_pic %}
+                                            <img src="{{ port.profile_pic.url }}" alt="{{ port.display_name }}">
+                                        {% else %}
+                                            <span>{{ port.user.username|slice:":2"|upper }}</span>
+                                        {% endif %}
+                                    </div>
+                                </a>
+                                <div class="bcet-card-actions">
+                                    <a href="{% url 'student_portfolio_profile' username=port.user.username %}" class="bcet-btn-join">
+                                        <span>View</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Student details -->
+                            <div class="bcet-card-info-wrap">
+                                <h3 class="bcet-club-name">
+                                    <a href="{% url 'student_portfolio_profile' username=port.user.username %}" class="bcet-club-link">
+                                        {{ port.display_name }}
+                                    </a>
+                                </h3>
+                                <span class="bcet-club-username">
+                                    @{{ port.user.username }}
+                                    {% if port.is_bluetick %}
+                                        <i data-lucide="badge-check" style="color: #0095FF; width: 14px; height: 14px; margin-left: 2px; vertical-align: middle;"></i>
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                            <div class="bcet-card-body">
+                                {% if port.department or port.batch_year or port.calculated_academic_year %}
+                                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;">
+                                        {% if port.calculated_academic_year %}
+                                            <span class="bcet-pill-batch">
+                                                {{ port.calculated_academic_year }}
+                                            </span>
+                                        {% elif port.batch_year %}
+                                            <span class="bcet-pill-batch">
+                                                BCET '{{ port.batch_year }}
+                                            </span>
+                                        {% endif %}
+                                        {% if port.department %}
+                                            <span class="bcet-pill-dept-card">
+                                                {{ port.department|truncatechars:28 }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+
+                                <p class="bcet-club-desc">
+                                    {{ port.headline|default:port.bio|default:"Student at BCET. Click to explore portfolio, skills, projects, and connect links."|truncatechars:120 }}
+                                </p>
+                            </div>
+
+                            <!-- Card foot -->
+                            <div class="bcet-card-foot">
+                                <div class="bcet-social-group">
+                                    {% if port.github %}
+                                        <a href="{{ port.github }}" target="_blank" rel="noopener noreferrer" class="bcet-social-btn social-links" title="GitHub">
+                                            <span>GitHub</span>
+                                        </a>
+                                    {% endif %}
+                                    {% if port.linkedin %}
+                                        <a href="{{ port.linkedin }}" target="_blank" rel="noopener noreferrer" class="bcet-social-btn social-links" title="LinkedIn">
+                                            <span>LinkedIn</span>
+                                        </a>
+                                    {% endif %}
+                                    {% if port.is_bluetick and port.instagram %}
+                                        <a href="{{ port.instagram_url }}" target="_blank" rel="noopener noreferrer" class="bcet-social-btn social-links" title="Instagram">
+                                            <span>Instagram</span>
+                                        </a>
+                                    {% endif %}
+                                    <button type="button" onclick="navigator.share ? navigator.share({title: '{{ port.display_name|escapejs }} - BCETHub', url: window.location.origin + '{% url 'student_portfolio_profile' username=port.user.username %}'}) : copyUrl(window.location.origin + '{% url 'student_portfolio_profile' username=port.user.username %}')" class="bcet-social-btn social-links" title="Share Portfolio">
+                                        <i data-lucide="share-2" style="width: 14px; height: 14px;"></i>
+                                        <span>Share</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
+        {% if not post_results and not faculty_results and not induction_results and not routine_results and not mess_results and not branch_results and not notes_results and not assignments_results and not pyqs_results and not community_results and not portfolio_results %}
             <div class="empty-state-box">
                 <i data-lucide="search-x" class="empty-icon"></i>
                 <h3>No exact matches found for "{{ query }}"</h3>

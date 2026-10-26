@@ -1,0 +1,1404 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Portfolio - @{{ profile_user.username }} | BCETHub{% endblock %}
+
+{% block content %}
+<div class="bcet-portfolio-container">
+    <div class="bcet-portfolio-card">
+        <!-- Header -->
+        <div class="bcet-edit-header">
+            <div>
+                <a href="{% url 'student_portfolio_profile' username=profile_user.username %}" class="bcet-back-link">
+                    <i data-lucide="arrow-left"></i>
+                    <span>Back to Portfolio</span>
+                </a>
+                <h1 class="bcet-edit-title">Edit Your Student Portfolio</h1>
+                <p class="bcet-edit-subtitle">Customize your presence, skills, images, and links on BCETHub.</p>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <a href="{% url 'change_password' %}" class="bcet-btn-outline" style="padding: 6px 12px; font-size: 12.5px;">
+                    <i data-lucide="key"></i>
+                    <span>Change Password</span>
+                </a>
+            </div>
+        </div>
+
+        <form method="POST" action="{% url 'student_portfolio_edit' username=profile_user.username %}" enctype="multipart/form-data" class="bcet-edit-form" onsubmit="return validateEditForm()">
+            {% csrf_token %}
+
+            <!-- Account settings -->
+            <div class="bcet-form-section">
+                <h3 class="bcet-section-heading">
+                    <i data-lucide="settings"></i>
+                    <span>Account & Privacy</span>
+                </h3>
+
+                <div class="bcet-grid-2">
+                    <!-- Username field -->
+                    <div class="bcet-form-field">
+                        <label for="username">
+                            <i data-lucide="at-sign"></i> Username
+                        </label>
+                        <div class="bcet-input-wrap">
+                            <span class="bcet-input-prefix">@</span>
+                            <input 
+                                type="text" 
+                                id="username" 
+                                name="username" 
+                                value="{{ profile_user.username }}" 
+                                required 
+                                class="bcet-input"
+                                hx-get="{% url 'check_username' %}"
+                                hx-trigger="keyup changed delay:300ms"
+                                hx-target="#username-live-status"
+                                hx-include="[name='current_username']"
+                            >
+                        </div>
+                        <input type="hidden" name="current_username" value="{{ profile_user.username }}">
+                        <div id="username-live-status" class="bcet-live-status"></div>
+                        <span class="bcet-input-hint">4-20 chars: lowercase letters, numbers, _ and . only.</span>
+                    </div>
+
+                    <!-- Email Address with OTP -->
+                    <div class="bcet-form-field">
+                        <label for="email">
+                            <i data-lucide="mail"></i> Email Address
+                        </label>
+                        <div class="bcet-input-wrap" style="display: flex; gap: 8px;">
+                            <input 
+                                type="email" 
+                                id="email" 
+                                name="email" 
+                                value="{{ profile_user.email }}" 
+                                required 
+                                class="bcet-input"
+                                data-current-email="{{ profile_user.email|lower }}"
+                                placeholder="bcet gmail formatformat"
+                                oninput="handleEmailInput()"
+                            >
+                            <button 
+                                type="button" 
+                                id="btn-send-email-otp" 
+                                onclick="sendEmailOtp()" 
+                                class="bcet-btn-send-otp"
+                                style="display: none; white-space: nowrap; padding: 0 14px; font-size: 13px; font-weight: 600; border-radius: 8px; border: 1px solid #0284c7; background: #0284c7; color: #ffffff; cursor: pointer;"
+                            >
+                                Send OTP
+                            </button>
+                        </div>
+                        <div id="email-live-status" class="bcet-live-status"></div>
+                        <span id="email-hint" class="bcet-input-hint">Must follow <code>gdg bcet gmail</code> format.</span>
+
+                        <!-- OTP input box -->
+                        <div id="email-otp-box" style="display: none; margin-top: 10px; padding: 12px; background: rgba(2, 132, 199, 0.08); border: 1px solid rgba(2, 132, 199, 0.25); border-radius: 8px;">
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">
+                                Verification Code (OTP)
+                            </label>
+                            <div style="display: flex; gap: 8px;">
+                                <input 
+                                    type="text" 
+                                    id="email_otp" 
+                                    name="email_otp" 
+                                    placeholder="6-digit code" 
+                                    maxlength="6"
+                                    class="bcet-input"
+                                    style="letter-spacing: 2px; font-family: monospace; font-weight: 700; width: 140px;"
+                                >
+                                <button 
+                                    type="button" 
+                                    id="btn-verify-email-otp" 
+                                    onclick="verifyEmailOtp()" 
+                                    style="padding: 0 16px; font-size: 13px; font-weight: 600; border-radius: 8px; border: none; background: #22c55e; color: #ffffff; cursor: pointer;"
+                                >
+                                    Verify
+                                </button>
+                                <button 
+                                    type="button" 
+                                    id="btn-resend-email-otp" 
+                                    onclick="sendEmailOtp()" 
+                                    style="display: none; padding: 0 12px; font-size: 12px; font-weight: 600; border-radius: 8px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-muted); cursor: pointer;"
+                                >
+                                    Resend
+                                </button>
+                            </div>
+                            <div id="email-otp-msg" style="font-size: 12px; margin-top: 6px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visibility toggle -->
+                <div class="bcet-form-field" style="margin-top: 18px;">
+                    <label>
+                        <i data-lucide="eye"></i> Profile Visibility
+                    </label>
+                    <div class="bcet-visibility-options">
+                        <label class="bcet-radio-box {% if portfolio.is_public %}is-selected{% endif %}">
+                            <input type="radio" name="is_public" value="1" {% if portfolio.is_public %}checked{% endif %} onchange="updateVisibilityCards(this)">
+                            <div class="bcet-radio-content">
+                                <div class="bcet-radio-title">
+                                    <i data-lucide="globe"></i>
+                                    <strong>Public Profile</strong>
+                                </div>
+                                <p>Visible to everyone, listed in Community social tab, discoverable across BCETHub.</p>
+                            </div>
+                        </label>
+                        <label class="bcet-radio-box {% if not portfolio.is_public %}is-selected{% endif %}">
+                            <input type="radio" name="is_public" value="0" {% if not portfolio.is_public %}checked{% endif %} onchange="updateVisibilityCards(this)">
+                            <div class="bcet-radio-content">
+                                <div class="bcet-radio-title">
+                                    <i data-lucide="lock"></i>
+                                    <strong>Private Profile</strong>
+                                </div>
+                                <p>Only you can view your portfolio. Hidden from public directory and community.</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile images -->
+            <div class="bcet-form-section">
+                <h3 class="bcet-section-heading">
+                    <i data-lucide="image"></i>
+                    <span>Profile Images</span>
+                </h3>
+
+                <div class="bcet-images-upload-grid">
+                    <!-- Profile picture -->
+                    <div class="bcet-img-upload-box">
+                        <label class="bcet-upload-label">Profile Picture</label>
+                        <div class="bcet-avatar-preview-wrap">
+                            {% if portfolio.profile_pic %}
+                                <img src="{{ portfolio.profile_pic.url }}" id="avatar-preview" alt="Avatar Preview" class="bcet-avatar-preview-img">
+                            {% else %}
+                                <img src="{% static 'img/defult.jpeg' %}" id="avatar-preview" alt="Avatar Preview" class="bcet-avatar-preview-img">
+                                <!-- <div id="avatar-placeholder" class="bcet-avatar-preview-placeholder">
+                                    {{ profile_user.username|slice:":2"|upper }}
+                                </div>
+                                <img id="avatar-preview" alt="Avatar Preview" class="bcet-avatar-preview-img" style="display: none;"> -->
+                            {% endif %}
+                        </div>
+                        {% if portfolio.profile_pic %}
+                            <label class="bcet-clear-checkbox">
+                                <input type="checkbox" name="clear_profile_pic" value="1">
+                                <span>Remove picture</span>
+                            </label>
+                        {% endif %}
+                        <input type="file" id="profile_pic" name="profile_pic" accept=".jpg,.jpeg,.png,.webp,.gif" class="bcet-file-input" onchange="previewImage(this, 'avatar-preview', 'avatar-placeholder')">
+                        <span class="bcet-input-hint">PNG, JPG, WebP, or animated GIF (Max 5MB)</span>
+                    </div>
+
+                    <!-- Cover banner -->
+                    <div class="bcet-img-upload-box" style="flex: 2;">
+                        <label class="bcet-upload-label">Cover Banner</label>
+                        <div class="bcet-banner-preview-wrap">
+                            {% if portfolio.banner %}
+                                <img src="{{ portfolio.banner.url }}" id="banner-preview" alt="Banner Preview" class="bcet-banner-preview-img">
+                            {% elif portfolio.profile_pic %}
+                                <img src="{{ portfolio.profile_pic.url }}" id="banner-preview" alt="Banner Preview" class="bcet-banner-preview-img profile-banner">
+                            {% else %}
+                                <div id="banner-placeholder" class="bcet-banner-preview-placeholder">
+                                    <i data-lucide="image"></i>
+                                    <span>Default gradient active</span>
+                                </div>
+                                <img id="banner-preview" alt="Banner Preview" class="bcet-banner-preview-img" style="display: none;">
+                            {% endif %}
+                        </div>
+                        {% if portfolio.banner %}
+                            <label class="bcet-clear-checkbox">
+                                <input type="checkbox" name="clear_banner" value="1">
+                                <span>Remove banner</span>
+                            </label>
+                        {% endif %}
+                        <input type="file" id="banner" name="banner" accept="image/png,image/jpeg,image/webp,image/gif,image/*" class="bcet-file-input" onchange="previewImage(this, 'banner-preview', 'banner-placeholder')">
+                        <span class="bcet-input-hint">Aspect ratio 16:5. PNG, JPG, WebP, or animated GIF (Max 5MB)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Basic details -->
+            <div class="bcet-form-section">
+                <h3 class="bcet-section-heading">
+                    <i data-lucide="user"></i>
+                    <span>Basic Details</span>
+                </h3>
+
+                <div class="bcet-grid-2">
+                    <div class="bcet-form-field">
+                        <label for="full_name">Full Name</label>
+                        <div class="bcet-input-wrap">
+                            <input type="text" id="full_name" name="full_name" value="{{ portfolio.full_name|default:'' }}" placeholder="e.g. Rishabh Kumar" class="bcet-input">
+                        </div>
+                    </div>
+                     <div class="bcet-form-field">
+                        <label for="gender">Gender</label>
+
+                        <select name="gender" id="gender">
+                            <option value="">Select Gender</option>
+
+                            {% for value, label in gender_list %}
+                                <option value="{{ value }}"
+                                    {% if portfolio.gender == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="bcet-form-field">
+                        <label for="dob">Date of Birth</label>
+
+                        <input
+                            type="date"
+                            name="dob"
+                            id="dob"
+                            value="{{ portfolio.dob|date:'Y-m-d'|default:'' }}"
+                        >
+                    </div>
+
+                    <div class="bcet-form-field">
+                        <label for="department">Department / Branch</label>
+                        <div class="bcet-input-wrap">
+                            <input type="text" id="department" name="department" value="{{ portfolio.department|default:'' }}" placeholder="e.g. Computer Science & Engineering" class="bcet-input">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bcet-form-field">
+                    <label for="headline">Headline / Tagline</label>
+                    <div class="bcet-input-wrap">
+                        <input type="text" id="headline" name="headline" value="{{ portfolio.headline|default:'' }}" placeholder="e.g. Full Stack Developer | Open Source Contributor | Tech Club Member" class="bcet-input">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Academic details -->
+            <div class="bcet-form-section">
+                <h3 class="bcet-section-heading">
+                    <i data-lucide="graduation-cap"></i>
+                    <span>Academic &amp; Degree Details</span>
+                </h3>
+
+                <div class="bcet-grid-2">
+                    <div class="bcet-form-field">
+                        <label for="admission_year">Admission Year</label>
+                        <div class="bcet-input-wrap">
+                            <input 
+                                type="number" 
+                                id="admission_year" 
+                                name="admission_year" 
+                                min="2000" 
+                                max="2035" 
+                                value="{{ portfolio.admission_year|default:'' }}" 
+                                placeholder="e.g. 2023" 
+                                class="bcet-input"
+                                oninput="recalculateAcademicDetails(true)"
+                            >
+                        </div>
+                        <span class="bcet-input-hint">Year you joined BCET.</span>
+                    </div>
+
+                    <div class="bcet-form-field">
+                        <label for="current_semester">Current Semester</label>
+                        <div class="bcet-input-wrap">
+                            <select id="current_semester" name="current_semester" class="bcet-input" onchange="recalculateAcademicDetails(true)" style="background: var(--card-bg); cursor: pointer;">
+                                <option value="">-- Select Semester --</option>
+                                <option value="1" {% if portfolio.current_semester == 1 %}selected{% endif %}>Semester 1 (1st Year)</option>
+                                <option value="2" {% if portfolio.current_semester == 2 %}selected{% endif %}>Semester 2 (1st Year)</option>
+                                <option value="3" {% if portfolio.current_semester == 3 %}selected{% endif %}>Semester 3 (2nd Year)</option>
+                                <option value="4" {% if portfolio.current_semester == 4 %}selected{% endif %}>Semester 4 (2nd Year)</option>
+                                <option value="5" {% if portfolio.current_semester == 5 %}selected{% endif %}>Semester 5 (3rd Year)</option>
+                                <option value="6" {% if portfolio.current_semester == 6 %}selected{% endif %}>Semester 6 (3rd Year)</option>
+                                <option value="7" {% if portfolio.current_semester == 7 %}selected{% endif %}>Semester 7 (4th Year)</option>
+                                <option value="8" {% if portfolio.current_semester == 8 %}selected{% endif %}>Semester 8 (4th Year)</option>
+                                <option value="graduated" {% if portfolio.is_graduated %}selected{% endif %}>Graduated / Passout</option>
+                            </select>
+                        </div>
+                        <span class="bcet-input-hint">Select semester or graduated status.</span>
+                    </div>
+                </div>
+
+                <div class="bcet-grid-2" style="margin-top: 14px;">
+                    <div class="bcet-form-field">
+                        <label for="degree_duration_years">Degree Duration (Years)</label>
+                        <div class="bcet-input-wrap">
+                            <input 
+                                type="number" 
+                                id="degree_duration_years" 
+                                name="degree_duration_years" 
+                                min="1" 
+                                max="6" 
+                                value="{{ portfolio.degree_duration_years|default:4 }}" 
+                                class="bcet-input"
+                                oninput="recalculateAcademicDetails(true)"
+                            >
+                        </div>
+                        <span class="bcet-input-hint">Course length (Default: 4 Years).</span>
+                    </div>
+
+                    <div class="bcet-form-field">
+                        <label for="batch_year">Graduation Year (Batch)</label>
+                        <div class="bcet-input-wrap">
+                            <input 
+                                type="text" 
+                                id="batch_year" 
+                                name="batch_year" 
+                                value="{{ portfolio.batch_year|default:'' }}" 
+                                placeholder="e.g. 2027" 
+                                class="bcet-input"
+                                oninput="recalculateAcademicDetails(false)"
+                            >
+                        </div>
+                        <span id="batch-live-hint" class="bcet-input-hint" style="color: #0284c7; font-weight: 600;">
+                            Auto-calculates completion year. You can also edit directly.
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- About and skills -->
+            <div class="bcet-form-section">
+                <h3 class="bcet-section-heading">
+                    <i data-lucide="file-text"></i>
+                    <span>About & Skills</span>
+                </h3>
+
+                <div class="bcet-form-field">
+                    <label for="bio">Bio (About You)</label>
+                    <div class="bcet-textarea-wrap">
+                        <textarea id="bio" name="bio" rows="4" placeholder="Write a brief bio about yourself, projects, and interests." class="bcet-textarea">{{ portfolio.bio|default:'' }}</textarea>
+                    </div>
+                </div>
+
+                <div class="bcet-form-field">
+                    <label for="skills">Skills (Comma-separated)</label>
+                    <div class="bcet-input-wrap">
+                        <input type="text" id="skills" name="skills" value="{{ portfolio.skills|default:'' }}" placeholder="e.g. Python, Django, JavaScript, React, Git, C++" class="bcet-input">
+                    </div>
+                    <span class="bcet-input-hint">Separate skills with commas (e.g. Python, React, Git). Displayed as tags on your profile.</span>
+                </div>
+            </div>
+
+            <!-- Connect links -->
+            <div class="bcet-form-section">
+                <h3 class="bcet-section-heading">
+                    <i data-lucide="link"></i>
+                    <span>Connect Links</span>
+                </h3>
+
+                <div class="bcet-form-field">
+                    <label for="github"><i data-lucide="code"></i> GitHub URL</label>
+                    <div class="bcet-input-wrap">
+                        <input type="url" id="github" name="github" value="{{ portfolio.github|default:'' }}" placeholder="https://github.com/yourusername" class="bcet-input">
+                    </div>
+                </div>
+
+                <div class="bcet-form-field">
+                    <label for="linkedin"><i data-lucide="briefcase"></i> LinkedIn URL</label>
+                    <div class="bcet-input-wrap">
+                        <input type="url" id="linkedin" name="linkedin" value="{{ portfolio.linkedin|default:'' }}" placeholder="https://linkedin.com/in/yourprofile" class="bcet-input">
+                    </div>
+                </div>
+
+                <div class="bcet-form-field">
+                    <label for="website"><i data-lucide="globe"></i> Personal Website / Portfolio</label>
+                    <div class="bcet-input-wrap">
+                        <input type="url" id="website" name="website" value="{{ portfolio.website|default:'' }}" placeholder="https://yourportfolio.dev" class="bcet-input">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resume section -->
+            <div class="bcet-form-section">
+                <h3 class="bcet-section-heading">
+                    <i data-lucide="file-text"></i>
+                    <span>Resume / CV</span>
+                </h3>
+
+                <div class="bcet-form-field">
+                    <label for="resume">Upload Resume (PDF, DOC)</label>
+                    {% if portfolio.resume %}
+                        <div class="bcet-current-file">
+                            <i data-lucide="file-check"></i>
+                            <a href="{{ portfolio.resume.url }}" target="_blank" rel="noopener noreferrer">View Current Resume</a>
+                            <label class="bcet-clear-checkbox" style="margin-left: 10px;">
+                                <input type="checkbox" name="clear_resume" value="1">
+                                <span>Remove resume</span>
+                            </label>
+                        </div>
+                    {% endif %}
+                    <input type="file" id="resume" name="resume" accept=".pdf,.doc,.docx" class="bcet-file-input">
+                    <span class="bcet-input-hint">Supported formats: PDF, DOC, DOCX (Max 10MB). Showcased on your public portfolio.</span>
+                </div>
+            </div>
+
+            <!-- Verified socials -->
+            <div class="bcet-form-section {% if not portfolio.is_bluetick %}bcet-section-locked{% endif %}">
+                <div class="bcet-section-header-split">
+                    <h3 class="bcet-section-heading">
+                        <i data-lucide="badge-check" style="color: #0095FF;"></i>
+                        <span>Verified Social Profiles</span>
+                    </h3>
+                    {% if portfolio.is_bluetick %}
+                        <span class="bcet-unlocked-badge">
+                            <i data-lucide="unlock"></i> Unlocked
+                        </span>
+                    {% else %}
+                        <span class="bcet-locked-badge">
+                            <i data-lucide="lock"></i> Blue Tick Required
+                        </span>
+                    {% endif %}
+                </div>
+
+                {% if not portfolio.is_bluetick %}
+                    <div class="bcet-bluetick-locked-box">
+                        <i data-lucide="shield-alert"></i>
+                        <div>
+                            <strong>Blue Tick Exclusive Feature</strong>
+                            <p>Adding Instagram, Facebook, and Twitter/X handles is exclusive to Verified Blue Tick accounts. Contact developer <a href="http://instagram.com/rishabhsahill" style="color: var(--text-primary); text-decoration: none;">@rishabhsahill</a> for verification.</p>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="bcet-form-field">
+                    <label for="instagram">
+                        <i data-lucide="instagram"></i> Instagram Handle or URL
+                    </label>
+                    <div class="bcet-input-wrap {% if not portfolio.is_bluetick %}is-disabled{% endif %}">
+                        <input 
+                            type="text" 
+                            id="instagram" 
+                            name="instagram" 
+                            value="{{ portfolio.instagram|default:'' }}" 
+                            placeholder="e.g. @rishabhsahill or https://instagram.com/..." 
+                            class="bcet-input"
+                            {% if not portfolio.is_bluetick %}disabled readonly{% endif %}
+                        >
+                    </div>
+                </div>
+
+                <div class="bcet-form-field">
+                    <label for="facebook">
+                        <i data-lucide="facebook"></i> Facebook Profile URL
+                    </label>
+                    <div class="bcet-input-wrap {% if not portfolio.is_bluetick %}is-disabled{% endif %}">
+                        <input 
+                            type="text" 
+                            id="facebook" 
+                            name="facebook" 
+                            value="{{ portfolio.facebook|default:'' }}" 
+                            placeholder="e.g. @rishabhsahill or https://facebook.com/..." 
+                            class="bcet-input"
+                            {% if not portfolio.is_bluetick %}disabled readonly{% endif %}
+                        >
+                    </div>
+                </div>
+
+                <div class="bcet-form-field">
+                    <label for="twitter">
+                        <i data-lucide="twitter"></i> Twitter / X Handle or URL
+                    </label>
+                    <div class="bcet-input-wrap {% if not portfolio.is_bluetick %}is-disabled{% endif %}">
+                        <input 
+                            type="text" 
+                            id="twitter" 
+                            name="twitter" 
+                            value="{{ portfolio.twitter|default:'' }}" 
+                            placeholder="e.g. @rishabhsahill or https://x.com/..." 
+                            class="bcet-input"
+                            {% if not portfolio.is_bluetick %}disabled readonly{% endif %}
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form actions -->
+            <div class="bcet-form-actions">
+                <button type="submit" class="bcet-btn-primary">
+                    <i data-lucide="check"></i>
+                    <span>Save Changes</span>
+                </button>
+                <a href="{% url 'student_portfolio_profile' username=profile_user.username %}" class="bcet-btn-outline">
+                    <span>Cancel</span>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let emailCheckTimeout = null;
+let emailOtpTimer = null;
+let isEmailVerified = false;
+
+function previewImage(input, previewId, placeholderId) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById(previewId);
+            const placeholder = document.getElementById(placeholderId);
+            if (preview) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                preview.classList.remove('profile-banner');
+            }
+            if (placeholder) {
+                placeholder.style.display = 'none';
+            }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function updateVisibilityCards(radio) {
+    document.querySelectorAll('.bcet-radio-box').forEach(el => el.classList.remove('is-selected'));
+    if (radio.checked) {
+        radio.closest('.bcet-radio-box').classList.add('is-selected');
+    }
+}
+
+function handleEmailInput() {
+    const emailInput = document.getElementById('email');
+    const sendBtn = document.getElementById('btn-send-email-otp');
+    const statusEl = document.getElementById('email-live-status');
+    const otpBox = document.getElementById('email-otp-box');
+
+    if (!emailInput) return;
+
+    const newEmail = emailInput.value.trim().toLowerCase();
+    const currentEmail = (emailInput.dataset.currentEmail || '').toLowerCase();
+
+    if (emailCheckTimeout) clearTimeout(emailCheckTimeout);
+
+    if (newEmail === currentEmail) {
+        if (sendBtn) sendBtn.style.display = 'none';
+        if (statusEl) statusEl.innerHTML = '<span style="color: #64748b; font-size: 12.5px;">Current verified email.</span>';
+        if (otpBox) otpBox.style.display = 'none';
+        isEmailVerified = true;
+        return;
+    }
+
+    if (!newEmail) {
+        if (sendBtn) sendBtn.style.display = 'none';
+        if (statusEl) statusEl.innerHTML = '';
+        if (otpBox) otpBox.style.display = 'none';
+        isEmailVerified = false;
+        return;
+    }
+
+    isEmailVerified = false;
+    statusEl.innerHTML = '<span style="color: #94a3b8; font-size: 12px;">Checking availability...</span>';
+
+    emailCheckTimeout = setTimeout(() => {
+        fetch("{% url 'student_email_check' %}?email=" + encodeURIComponent(newEmail))
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'available') {
+                    statusEl.innerHTML = '<span style="color: #22c55e; font-size: 12.5px;">✓ Email is available. Click <b>Send OTP</b> to verify.</span>';
+                    if (sendBtn) sendBtn.style.display = 'inline-block';
+                } else if (data.status === 'taken') {
+                    statusEl.innerHTML = '<span style="color: #ef4444; font-size: 12.5px;">✕ ' + data.message + '</span>';
+                    if (sendBtn) sendBtn.style.display = 'none';
+                } else if (data.status === 'invalid') {
+                    statusEl.innerHTML = '<span style="color: #ef4444; font-size: 12.5px;">✕ ' + data.message + '</span>';
+                    if (sendBtn) sendBtn.style.display = 'none';
+                } else {
+                    statusEl.innerHTML = '<span style="color: #64748b; font-size: 12.5px;">' + data.message + '</span>';
+                    if (sendBtn) sendBtn.style.display = 'none';
+                }
+            })
+            .catch(() => {
+                statusEl.innerHTML = '<span style="color: #ef4444; font-size: 12px;">Error checking email.</span>';
+            });
+    }, 350);
+}
+
+function sendEmailOtp() {
+    const emailInput = document.getElementById('email');
+    const sendBtn = document.getElementById('btn-send-email-otp');
+    const otpBox = document.getElementById('email-otp-box');
+    const otpMsg = document.getElementById('email-otp-msg');
+    const resendBtn = document.getElementById('btn-resend-email-otp');
+
+    if (!emailInput) return;
+    const email = emailInput.value.trim().toLowerCase();
+    if (!email) return;
+
+    if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.textContent = 'Sending...';
+    }
+
+    const formData = new FormData();
+    formData.append('email', email);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+    fetch("{% url 'student_email_send_otp' %}", {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'Send OTP';
+        }
+        if (data.success) {
+            if (otpBox) otpBox.style.display = 'block';
+            if (sendBtn) sendBtn.style.display = 'none';
+            if (otpMsg) otpMsg.innerHTML = '<span style="color: #0284c7;">' + data.message + '</span>';
+
+            let countdown = 60;
+            if (resendBtn) {
+                resendBtn.style.display = 'inline-block';
+                resendBtn.disabled = true;
+                resendBtn.textContent = 'Resend (' + countdown + 's)';
+            }
+            if (emailOtpTimer) clearInterval(emailOtpTimer);
+            emailOtpTimer = setInterval(() => {
+                countdown--;
+                if (countdown <= 0) {
+                    clearInterval(emailOtpTimer);
+                    if (resendBtn) {
+                        resendBtn.disabled = false;
+                        resendBtn.textContent = 'Resend OTP';
+                    }
+                } else if (resendBtn) {
+                    resendBtn.textContent = 'Resend (' + countdown + 's)';
+                }
+            }, 1000);
+        } else {
+            if (otpMsg) otpMsg.innerHTML = '<span style="color: #ef4444;">' + data.message + '</span>';
+        }
+    })
+    .catch(() => {
+        if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'Send OTP';
+        }
+        if (otpMsg) otpMsg.innerHTML = '<span style="color: #ef4444;">Network error sending OTP. Please try again.</span>';
+    });
+}
+
+function verifyEmailOtp() {
+    const emailInput = document.getElementById('email');
+    const otpInput = document.getElementById('email_otp');
+    const verifyBtn = document.getElementById('btn-verify-email-otp');
+    const otpMsg = document.getElementById('email-otp-msg');
+    const statusEl = document.getElementById('email-live-status');
+
+    if (!emailInput || !otpInput) return;
+    const email = emailInput.value.trim().toLowerCase();
+    const otp = otpInput.value.trim();
+
+    if (!otp || otp.length < 6) {
+        if (otpMsg) otpMsg.innerHTML = '<span style="color: #ef4444;">Please enter the 6-digit OTP code.</span>';
+        return;
+    }
+
+    if (verifyBtn) {
+        verifyBtn.disabled = true;
+        verifyBtn.textContent = 'Verifying...';
+    }
+
+    const formData = new FormData();
+    formData.append('email', email);
+    formData.append('otp', otp);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+    fetch("{% url 'student_email_verify_otp' %}", {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (verifyBtn) {
+            verifyBtn.disabled = false;
+            verifyBtn.textContent = 'Verify';
+        }
+        if (data.success) {
+            isEmailVerified = true;
+            if (otpMsg) otpMsg.innerHTML = '<span style="color: #22c55e; font-weight: 700;">✓ Email verified successfully! Save changes to apply.</span>';
+            if (statusEl) statusEl.innerHTML = '<span style="color: #22c55e; font-weight: 700;">✓ Verified (' + email + ')</span>';
+            emailInput.dataset.currentEmail = email;
+            if (verifyBtn) verifyBtn.style.display = 'none';
+            const resendBtn = document.getElementById('btn-resend-email-otp');
+            if (resendBtn) resendBtn.style.display = 'none';
+        } else {
+            isEmailVerified = false;
+            if (otpMsg) otpMsg.innerHTML = '<span style="color: #ef4444;">' + data.message + '</span>';
+        }
+    })
+    .catch(() => {
+        if (verifyBtn) {
+            verifyBtn.disabled = false;
+            verifyBtn.textContent = 'Verify';
+        }
+        if (otpMsg) otpMsg.innerHTML = '<span style="color: #ef4444;">Verification failed. Please try again.</span>';
+    });
+}
+
+function validateEditForm() {
+    const emailInput = document.getElementById('email');
+    if (!emailInput) return true;
+
+    const newEmail = emailInput.value.trim().toLowerCase();
+    const currentEmail = (emailInput.dataset.currentEmail || '').toLowerCase();
+
+    if (newEmail && newEmail !== currentEmail && !isEmailVerified) {
+        alert("Please verify your new email address with the OTP before saving.");
+        const otpBox = document.getElementById('email-otp-box');
+        if (otpBox && otpBox.style.display === 'none') {
+            sendEmailOtp();
+        }
+        emailInput.focus();
+        return false;
+    }
+    return true;
+}
+
+function recalculateAcademicDetails(autoUpdateBatch) {
+    const admInput = document.getElementById('admission_year');
+    const semSelect = document.getElementById('current_semester');
+    const durInput = document.getElementById('degree_duration_years');
+    const batchInput = document.getElementById('batch_year');
+    const hint = document.getElementById('batch-live-hint');
+
+    if (!admInput || !batchInput) return;
+
+    const adm = parseInt(admInput.value, 10);
+    const sem = semSelect ? semSelect.value : '';
+    const dur = parseInt(durInput ? durInput.value : 4, 10) || 4;
+
+    let yearText = "";
+    if (sem === 'graduated') {
+        yearText = "Passout / Alumni";
+    } else if (sem) {
+        const s = parseInt(sem, 10);
+        if (s === 1 || s === 2) yearText = "1st Year (Semester " + s + ")";
+        else if (s === 3 || s === 4) yearText = "2nd Year (Semester " + s + ")";
+        else if (s === 5 || s === 6) yearText = "3rd Year (Semester " + s + ")";
+        else if (s === 7 || s === 8) yearText = "4th Year (Semester " + s + ")";
+    } else if (!isNaN(adm)) {
+        const d = new Date();
+        const currYear = d.getFullYear();
+        const currMonth = d.getMonth() + 1;
+        const academicStart = currMonth >= 7 ? currYear : (currYear - 1);
+        const diff = academicStart - adm + 1;
+        if (diff <= 1) yearText = "1st Year";
+        else if (diff === 2) yearText = "2nd Year";
+        else if (diff === 3) yearText = "3rd Year";
+        else if (diff === 4) yearText = "4th Year";
+        else yearText = "Passout / Alumni";
+    }
+
+    if (!isNaN(adm)) {
+        const comp = adm + dur;
+        if (autoUpdateBatch) {
+            batchInput.value = comp;
+        }
+        if (hint) {
+            hint.innerHTML = (yearText ? yearText + " • " : "") + "Degree Completion: <b>" + (batchInput.value || comp) + "</b>";
+        }
+    } else if (batchInput.value) {
+        if (hint) {
+            hint.innerHTML = (yearText ? yearText + " • " : "") + "Batch: <b>" + batchInput.value + "</b>";
+        }
+    } else {
+        if (hint) {
+            hint.textContent = "Auto-calculates completion year. You can also edit directly.";
+        }
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    recalculateAcademicDetails(false);
+    const emailInput = document.getElementById('email');
+    if (emailInput) {
+        isEmailVerified = true;
+    }
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+</script>
+
+<style>
+    .bcet-portfolio-container {
+        width: 100%;
+        max-width: 860px;
+        margin: 0px auto 50px;
+        box-sizing: border-box;
+    }
+
+    .bcet-portfolio-card {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .bcet-edit-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 28px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--border-color);
+        flex-wrap: wrap;
+    }
+
+    .bcet-back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        transition: color 0.15s ease;
+    }
+
+    .bcet-back-link:hover {
+        color: #0284c7;
+    }
+
+    .bcet-back-link svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .bcet-edit-title {
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0 0 6px 0;
+    }
+
+    .bcet-edit-subtitle {
+        font-size: 13.5px;
+        color: var(--text-muted);
+        margin: 0;
+    }
+
+    .bcet-blue-tick-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 12px;
+        background: rgba(0, 149, 255, 0.12);
+        border: 1px solid rgba(0, 149, 255, 0.35);
+        color: #0095FF;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .bcet-blue-tick-badge svg {
+        width: 15px;
+        height: 15px;
+    }
+
+    .bcet-edit-form {
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+    }
+
+    .bcet-form-section {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 18px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+    }
+
+    .bcet-section-heading {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 4px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .bcet-section-heading svg {
+        width: 16px;
+        height: 16px;
+        color: #0284c7;
+    }
+
+    .bcet-section-header-split {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .bcet-unlocked-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11.5px;
+        font-weight: 700;
+        color: #22c55e;
+        background: rgba(34, 197, 94, 0.1);
+        padding: 3px 8px;
+        border-radius: 6px;
+    }
+
+    .bcet-unlocked-badge svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    .bcet-locked-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11.5px;
+        font-weight: 700;
+        color: #f59e0b;
+        background: rgba(245, 158, 11, 0.1);
+        padding: 3px 8px;
+        border-radius: 6px;
+    }
+
+    .bcet-locked-badge svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    .bcet-bluetick-locked-box {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        background: rgba(245, 158, 11, 0.08);
+        border: 1px solid rgba(245, 158, 11, 0.25);
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-size: 12.5px;
+    }
+
+    .bcet-bluetick-locked-box svg {
+        width: 18px;
+        height: 18px;
+        color: #f59e0b;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .bcet-bluetick-locked-box strong {
+        color: #f59e0b;
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .bcet-bluetick-locked-box p {
+        color: var(--text-muted);
+        margin: 0;
+    }
+
+    /* Visibility cards */
+    .bcet-visibility-options {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .bcet-radio-box {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        background: var(--card-bg);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .bcet-radio-box:hover {
+        border-color: #0284c7;
+    }
+
+    .bcet-radio-box.is-selected {
+        border-color: #0284c7;
+        background: rgba(2, 132, 199, 0.06);
+    }
+
+    .bcet-radio-box input[type="radio"] {
+        margin-top: 3px;
+        accent-color: #0284c7;
+    }
+
+    .bcet-radio-content {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .bcet-radio-title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13.5px;
+        color: var(--text-primary);
+    }
+
+    .bcet-radio-title svg {
+        width: 15px;
+        height: 15px;
+        color: #0284c7;
+    }
+
+    .bcet-radio-content p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--text-muted);
+        line-height: 1.4;
+    }
+
+    /* Upload grid */
+    .bcet-images-upload-grid {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+
+    .bcet-img-upload-box {
+        flex: 1;
+        min-width: 220px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .bcet-upload-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .bcet-avatar-preview-wrap {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        border: 2px solid var(--border-color);
+        overflow: hidden;
+        background: var(--card-bg);
+    }
+
+    .bcet-avatar-preview-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .bcet-avatar-preview-placeholder {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%);
+        color: #ffffff;
+        font-size: 26px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .bcet-banner-preview-wrap {
+        width: 100%;
+        height: 90px;
+        border-radius: 10px;
+        border: 2px solid var(--border-color);
+        overflow: hidden;
+        background: #0f172a;
+    }
+
+    .bcet-banner-preview-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .profile-banner {
+        object-position: center;
+        filter: blur(3px);
+        transform: scale(1.05);
+    }
+
+    .bcet-banner-preview-placeholder {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #091322 0%, #172554 100%);
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 12.5px;
+    }
+
+    .bcet-banner-preview-placeholder svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .bcet-file-input {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    .bcet-input-hint {
+        font-size: 11.5px;
+        color: var(--text-muted);
+    }
+
+    .bcet-clear-checkbox {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #ef4444;
+        cursor: pointer;
+        user-select: none;
+        margin-top: 4px;
+        font-weight: 500;
+    }
+
+    .bcet-clear-checkbox input[type="checkbox"] {
+        accent-color: #ef4444;
+        cursor: pointer;
+    }
+
+    .bcet-current-file {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: rgba(2, 132, 199, 0.08);
+        border: 1px solid rgba(2, 132, 199, 0.2);
+        border-radius: 8px;
+        font-size: 13px;
+        flex-wrap: wrap;
+        margin-bottom: 6px;
+    }
+
+    .bcet-current-file a {
+        color: #0284c7;
+        text-decoration: underline;
+        font-weight: 600;
+    }
+
+    .bcet-current-file svg {
+        width: 16px;
+        height: 16px;
+        color: #0284c7;
+    }
+
+    .bcet-live-status {
+        min-height: 18px;
+        font-size: 12.5px;
+    }
+
+    /* Fields */
+    .bcet-grid-2 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+    }
+
+    .bcet-form-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .bcet-form-field label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .bcet-form-field label svg {
+        width: 14px;
+        height: 14px;
+        color: var(--text-muted);
+    }
+
+    .bcet-input-wrap {
+        display: flex;
+        align-items: center;
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+        transition: border-color 0.15s ease;
+    }
+
+    .bcet-input-prefix {
+        padding: 0 10px 0 12px;
+        color: var(--text-muted);
+        font-weight: 700;
+        font-size: 14px;
+    }
+
+    .bcet-input-wrap:focus-within {
+        border-color: #0284c7;
+    }
+
+    .bcet-input-wrap.is-disabled {
+        opacity: 0.6;
+        background: rgba(255, 255, 255, 0.02);
+        cursor: not-allowed;
+    }
+
+    .bcet-input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        padding: 10px 12px;
+        color: var(--text-primary);
+        font-size: 14px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .bcet-input:disabled {
+        cursor: not-allowed;
+        color: var(--text-muted);
+    }
+
+    .bcet-textarea-wrap {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+        transition: border-color 0.15s ease;
+    }
+
+    .bcet-textarea-wrap:focus-within {
+        border-color: #0284c7;
+    }
+
+    .bcet-textarea {
+        width: 100%;
+        background: transparent;
+        border: none;
+        outline: none;
+        padding: 12px;
+        color: var(--text-primary);
+        font-size: 14px;
+        line-height: 1.5;
+        resize: vertical;
+        box-sizing: border-box;
+        font-family: inherit;
+    }
+
+    /* Actions */
+    .bcet-form-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+
+    .bcet-btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 24px;
+        background-color: #0284c7;
+        color: #ffffff;
+        border: 1px solid #0284c7;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .bcet-btn-primary:hover {
+        background-color: #0369a1;
+        border-color: #0369a1;
+    }
+
+    .bcet-btn-primary svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .bcet-btn-outline {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 20px;
+        background: transparent;
+        color: var(--text-muted);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .bcet-btn-outline:hover {
+        border-color: var(--text-muted);
+        color: var(--text-primary);
+    }
+
+    /* Date of Birth */
+    .bcet-form-field input[type="date"] {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px 12px;
+        min-height: 42px;
+        background-color: var(--card-bg);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        outline: none;
+        font-family: inherit;
+        font-size: 14px;
+        transition: border-color 0.15s ease;
+        cursor: pointer;
+    }
+
+    .bcet-form-field input[type="date"]:focus {
+        border-color: #0284c7;
+    }
+
+    .bcet-form-field input[type="date"]::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        opacity: 0.8;
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+        .bcet-portfolio-card {
+            padding: 20px 14px;
+        }
+        .bcet-form-field input[type="date"] {
+            min-height: 44px;
+            font-size: 16px;
+        }
+    }
+</style>
+{% endblock %}
